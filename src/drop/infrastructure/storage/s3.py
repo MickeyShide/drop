@@ -1,4 +1,4 @@
-from typing import BinaryIO, TYPE_CHECKING
+from typing import Any, BinaryIO, TYPE_CHECKING
 import boto3
 
 if TYPE_CHECKING:
@@ -67,7 +67,7 @@ class S3Storage:
             ExpiresIn=expires_in,
         )
 
-    def get_object(self, storage_key: str) -> tuple[BinaryIO, int, str | None]:
+    def get_object(self, storage_key: str) -> tuple[Any, int, str | None]:
         obj = self._client.get_object(
             Bucket=self._bucket,
             Key=storage_key,
@@ -75,4 +75,5 @@ class S3Storage:
         content_type = obj.get("ContentType")
         content_length = obj.get("ContentLength", 0)
         return obj["Body"], content_length, content_type
+
 
