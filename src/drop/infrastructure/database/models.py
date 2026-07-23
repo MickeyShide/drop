@@ -1,6 +1,6 @@
 import enum
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import BigInteger, DateTime, Enum, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -81,7 +81,7 @@ class DropModel(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(UTC),
     )
 
     consumed_at: Mapped[datetime | None] = mapped_column(

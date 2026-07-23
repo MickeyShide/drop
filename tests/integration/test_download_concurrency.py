@@ -1,7 +1,6 @@
 import asyncio
-from datetime import timedelta
-from datetime import UTC
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
+
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import (
@@ -140,6 +139,15 @@ async def test_unlimited_drop_accepts_concurrent_downloads(
 
     assert sum(results) == 20
 
+    async with session_factory() as session:
+        result = await session.execute(
+            select(DropModel).where(DropModel.public_id == public_id)
+        )
+        persisted = result.scalar_one()
+
+        assert persisted.download_count == 20
+        assert persisted.status.value == "ACTIVE"
+
 
 @pytest.mark.asyncio
 async def test_expired_drop_cannot_be_consumed(
@@ -160,3 +168,12 @@ async def test_expired_drop_cannot_be_consumed(
         result = await repository.consume_download(public_id)
 
         assert result is None
+
+    async with session_factory() as session:
+        persisted = await session.execute(
+            select(DropModel).where(DropModel.public_id == public_id)
+        )
+        drop = persisted.scalar_one()
+
+        assert drop.download_count == 0
+        assert drop.status.value == "ACTIVE"

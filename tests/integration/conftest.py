@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import (
 from testcontainers.postgres import PostgresContainer
 
 from drop.infrastructure.database.base import Base
+from drop.infrastructure.database import models as _models  # noqa: F401
 
 
 @pytest.fixture(scope="session")

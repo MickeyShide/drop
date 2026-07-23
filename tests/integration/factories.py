@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,7 +21,7 @@ async def create_active_drop(
     drop = DropModel(
         public_id=generate_public_id(),
         original_filename="test.txt",
-        storage_key="drops/test/source",
+        storage_key=f"drops/{uuid.uuid4()}/source",
         content_type="text/plain",
         size_bytes=100,
         status=DropStatus.ACTIVE,

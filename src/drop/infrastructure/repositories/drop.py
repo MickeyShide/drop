@@ -1,4 +1,4 @@
-from click import UUID
+from uuid import UUID
 from datetime import UTC, datetime
 
 from sqlalchemy import select, update, case
@@ -54,6 +54,14 @@ class DropRepository:
                         DropStatus.CONSUMED,
                     ),
                     else_=DropModel.status,
+                ),
+                consumed_at=case(
+                    (
+                        DropModel.max_downloads.is_not(None)
+                        & (DropModel.download_count + 1 >= DropModel.max_downloads),
+                        now,
+                    ),
+                    else_=DropModel.consumed_at,
                 ),
             )
             .returning(DropModel)
