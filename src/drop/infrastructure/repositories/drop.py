@@ -1,3 +1,4 @@
+from click import UUID
 from datetime import UTC, datetime
 
 from sqlalchemy import select, update, case
@@ -22,6 +23,12 @@ class DropRepository:
         result = await self._session.execute(stmt)
 
         return result.scalar_one_or_none()
+
+    async def get_by_id(
+        self,
+        drop_id: UUID,
+    ) -> DropModel | None:
+        return await self._session.get(DropModel, drop_id)
 
     async def consume_download(
         self,
