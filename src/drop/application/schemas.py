@@ -1,15 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
-
-
-class CreateDropRequest(BaseModel):
-    original_filename: str = Field(min_length=1, max_length=255)
-    content_type: str | None = Field(default=None, max_length=255)
-    size_bytes: int = Field(gt=0)
-    expires_in_seconds: int = Field(gt=0)
-    max_downloads: int | None = Field(default=None, gt=0)
-
+from pydantic import BaseModel
 
 class DropResponse(BaseModel):
     public_id: str

@@ -16,6 +16,12 @@ class Settings(BaseSettings):
 
     database_url: str
 
+    s3_endpoint: str
+    s3_access_key: str
+    s3_secret_key: str
+    s3_bucket: str
+    s3_region: str = "us-east-1"
+
 
 @lru_cache
 def get_settings() -> Settings:

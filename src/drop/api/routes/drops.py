@@ -1,42 +1,33 @@
-from drop.domain.exceptions import DropNotFoundError
-from fastapi import APIRouter, status, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, File, Form, UploadFile, status
 
 from drop.api.dependencies import DropServiceDep
-from drop.application.schemas import (
-    CreateDropRequest,
-    DropResponse,
+from drop.application.schemas import DropResponse
+
+
+router = APIRouter(
+    prefix="/api/v1/drops",
+    tags=["drops"],
 )
 
 
-router = APIRouter(prefix="/api/v1/drops", tags=["drops"])
-
-
-@router.post("", response_model=DropResponse, status_code=status.HTTP_201_CREATED)
-async def create_drop(data: CreateDropRequest, service: DropServiceDep) -> DropResponse:
-    drop = await service.create(data)
-
-    return DropResponse(
-        public_id=drop.public_id,
-        original_filename=drop.original_filename,
-        content_type=drop.content_type,
-        size_bytes=drop.size_bytes,
-        status=drop.status.value,
-        max_downloads=drop.max_downloads,
-        download_count=drop.download_count,
-        expires_at=drop.expires_at,
-        created_at=drop.created_at,
+@router.post(
+    "",
+    response_model=DropResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_drop(
+    service: DropServiceDep,
+    file: Annotated[UploadFile, File()],
+    expires_in_seconds: Annotated[int, Form(gt=0)],
+    max_downloads: Annotated[int | None, Form(gt=0)] = None,
+) -> DropResponse:
+    drop = await service.create(
+        file=file,
+        expires_in_seconds=expires_in_seconds,
+        max_downloads=max_downloads,
     )
-
-
-@router.get("/{public_id}", response_model=DropResponse)
-async def get_drop(public_id: str, service: DropServiceDep) -> DropResponse:
-    try:
-        drop = await service.get_by_public_id(public_id)
-    except DropNotFoundError as exc:
-        raise HTTPException(
-            status_code=404,
-            detail="Drop not found",
-        ) from exc
 
     return DropResponse(
         public_id=drop.public_id,
