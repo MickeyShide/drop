@@ -185,3 +185,16 @@ class DropService:
             drop.storage_key,
             60,
         )
+
+    async def get_download_stream(
+        self,
+        public_id: str,
+    ) -> tuple[Any, str, int, str | None]:
+        drop = await self.consume_download(public_id)
+
+        body, size, content_type = await run_in_threadpool(
+            self._storage.get_object,
+            drop.storage_key,
+        )
+        return body, drop.original_filename, size, content_type
+

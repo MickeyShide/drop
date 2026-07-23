@@ -66,3 +66,13 @@ class S3Storage:
             },
             ExpiresIn=expires_in,
         )
+
+    def get_object(self, storage_key: str) -> tuple[BinaryIO, int, str | None]:
+        obj = self._client.get_object(
+            Bucket=self._bucket,
+            Key=storage_key,
+        )
+        content_type = obj.get("ContentType")
+        content_length = obj.get("ContentLength", 0)
+        return obj["Body"], content_length, content_type
+

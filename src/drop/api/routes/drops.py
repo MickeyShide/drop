@@ -1,10 +1,12 @@
 from typing import Annotated, Any
+import urllib.parse
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from fastapi.responses import StreamingResponse
 
 from drop.api.dependencies import DropServiceDep
 from drop.api.rate_limit import RateLimitCreate, RateLimitDownload, RateLimitMetadata
-from drop.application.schemas import DownloadResponse, DropResponse, ErrorResponse
+from drop.application.schemas import DropResponse, ErrorResponse
 
 router = APIRouter(prefix="/api/v1/drops", tags=["drops"])
 
@@ -77,12 +79,26 @@ async def get_drop(public_id: str, service: DropServiceDep) -> DropResponse:
 
 @router.get(
     "/{public_id}/download",
-    response_model=DownloadResponse,
     dependencies=[Depends(RateLimitDownload)],
     responses=ERROR_RESPONSES,
-    summary="Get presigned download URL for drop",
+    summary="Download drop file",
 )
-async def download_drop(public_id: str, service: DropServiceDep) -> DownloadResponse:
-    url = await service.get_download_url(public_id)
+async def download_drop(public_id: str, service: DropServiceDep) -> StreamingResponse:
+    body, filename, size_bytes, content_type = await service.get_download_stream(public_id)
 
-    return DownloadResponse(url=url, expires_in=60)
+    def iterfile():
+        while chunk := body.read(1024 * 1024):
+            yield chunk
+
+    encoded_filename = urllib.parse.quote(filename)
+    headers = {
+        "Content-Disposition": f"attachment; filename=\"{encoded_filename}\"; filename*=UTF-8''{encoded_filename}",
+        "Content-Length": str(size_bytes),
+    }
+
+    return StreamingResponse(
+        iterfile(),
+        media_type=content_type or "application/octet-stream",
+        headers=headers,
+    )
+

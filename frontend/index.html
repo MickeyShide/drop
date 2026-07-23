@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Drop — Простой способ делиться файлами</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #eeef2b15;
+      --border: #e2e8f0;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+      --radius: 16px;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --border: #334155;
+      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      max-width: 1000px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 24px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: var(--primary);
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .logo svg {
+      width: 28px;
+      height: 28px;
+      fill: currentColor;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .nav-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: 0.95rem;
+      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: 8px;
+    }
+
+    .nav-btn:hover {
+      color: var(--text-main);
+    }
+
+    .theme-toggle {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      width: 100%;
+      max-width: 480px;
+      padding: 36px 32px;
+      text-align: center;
+      position: relative;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+
+    /* Upload Area */
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 36px 20px;
+      cursor: pointer;
+      background: rgba(79, 70, 229, 0.02);
+      margin-bottom: 24px;
+      transition: all 0.2s ease;
+    }
+
+    .dropzone:hover, .dropzone.dragover {
+      border-color: var(--primary);
+      background: rgba(79, 70, 229, 0.05);
+    }
+
+    .dropzone svg {
+      width: 48px;
+      height: 48px;
+      color: var(--primary);
+      margin-bottom: 12px;
+    }
+
+    .file-input {
+      display: none;
+    }
+
+    .form-group {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .select-wrapper {
+      flex: 1;
+      text-align: left;
+    }
+
+    .select-wrapper label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    select {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background-color: var(--card-bg);
+      color: var(--text-main);
+      font-size: 0.9rem;
+      outline: none;
+      cursor: pointer;
+    }
+
+    select:focus {
+      border-color: var(--primary);
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 14px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.2s ease;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 12px;
+      background: transparent;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 12px;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(79, 70, 229, 0.05);
+    }
+
+    /* Progress Bar */
+    .progress-container {
+      display: none;
+      margin-top: 20px;
+      text-align: left;
+    }
+
+    .progress-bar-bg {
+      background: var(--border);
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .progress-bar-fill {
+      background: var(--primary);
+      height: 100%;
+      width: 0%;
+      transition: width 0.1s linear;
+    }
+
+    .progress-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* Link Copy Input */
+    .link-box {
+      display: flex;
+      gap: 8px;
+      margin: 20px 0;
+    }
+
+    .link-input {
+      flex: 1;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--text-main);
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    .copy-btn {
+      padding: 12px 16px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .badge-info {
+      background: rgba(79, 70, 229, 0.08);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 20px;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+
+    .badge-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+    }
+
+    .status-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 16px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .icon-success { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+    .icon-danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+    .icon-warning { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+    .icon-info { background: rgba(79, 70, 229, 0.1); color: var(--primary); }
+
+    .status-icon svg {
+      width: 32px;
+      height: 32px;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+    }
+
+    .modal-content {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      max-width: 500px;
+      width: 100%;
+      padding: 28px;
+      text-align: left;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a class="logo" onclick="showUploadScreen()">
+      <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+      Drop
+    </a>
+    <div class="header-actions">
+      <button class="nav-btn" onclick="openAboutModal()">О проекте</button>
+      <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">☀️</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+      
+      <!-- SCREEN 1: UPLOAD FORM -->
+      <div id="screenUpload">
+        <h1>Простой способ делиться файлами</h1>
+        <p class="subtitle">Загрузите файл. Установите срок действия и лимит скачиваний. Получите ссылку.</p>
+
+        <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+          <div style="font-weight: 600; margin-bottom: 4px;" id="selectedFileName">Перетащите файл сюда или нажмите для выбора</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted);" id="selectedFileSize">Максимальный размер: 100 MB</div>
+          <input type="file" id="fileInput" class="file-input">
+        </div>
+
+        <div class="form-group">
+          <div class="select-wrapper">
+            <label>Срок действия</label>
+            <select id="expiresSelect">
+              <option value="3600">1 час</option>
+              <option value="21600">6 часов</option>
+              <option value="86400" selected>24 часа</option>
+              <option value="259200">72 часа</option>
+              <option value="604800">7 дней</option>
+            </select>
+          </div>
+          <div class="select-wrapper">
+            <label>Скачиваний</label>
+            <select id="downloadsSelect">
+              <option value="1" selected>1 скачивание</option>
+              <option value="3">3 скачивания</option>
+              <option value="5">5 скачиваний</option>
+              <option value="10">10 скачиваний</option>
+              <option value="">Без ограничений</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="btn-primary" id="uploadBtn" onclick="uploadFile()">Создать Drop</button>
+
+        <div class="progress-container" id="progressContainer">
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progressBarFill"></div>
+          </div>
+          <div class="progress-info">
+            <span id="progressStatus">Загрузка...</span>
+            <span id="progressPercent">0%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCREEN 2: SUCCESS CREATED -->
+      <div id="screenSuccess" class="hidden">
+        <div class="status-icon icon-success">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>
+        </div>
+        <h1>Drop создан!</h1>
+        <p class="subtitle">Файл готов к скачиванию</p>
+
+        <div class="link-box">
+          <input type="text" id="createdLinkInput" class="link-input" readonly>
+          <button class="copy-btn" id="copyBtn" onclick="copyCreatedLink()">Копировать</button>
+        </div>
+
+        <div class="badge-info">
+          <div class="badge-row">
+            <span style="color: var(--text-muted);">Имя файла:</span>
+            <strong id="createdFileName">-</strong>
+          </div>
+          <div class="badge-row">
+            <span style="color: var(--text-muted);">Размер:</span>
+            <strong id="createdFileSize">-</strong>
+          </div>
+          <div class="badge-row">
+            <span style="color: var(--text-muted);">Лимит скачиваний:</span>
+            <strong id="createdLimit">-</strong>
+          </div>
+        </div>
+
+        <button class="btn-secondary" onclick="showUploadScreen()">Создать ещё один</button>
+      </div>
+
+      <!-- SCREEN 3: RECIPIENT DOWNLOAD -->
+      <div id="screenDownload" class="hidden">
+        <div class="status-icon icon-info">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        </div>
+        <h1 id="downloadFileName">document.pdf</h1>
+        <p class="subtitle" id="downloadFileSize">2.45 MB</p>
+
+        <div class="badge-info">
+          <div class="badge-row">
+            <span style="color: var(--text-muted);">Срок действия:</span>
+            <strong id="downloadExpires">до ...</strong>
+          </div>
+          <div class="badge-row">
+            <span style="color: var(--text-muted);">Осталось скачиваний:</span>
+            <strong id="downloadRemaining">-</strong>
+          </div>
+        </div>
+
+        <button class="btn-primary" id="downloadBtn" onclick="executeDownload()">Скачать файл</button>
+        <button class="btn-secondary" onclick="showUploadScreen()">Создать свой Drop</button>
+      </div>
+
+      <!-- SCREEN 4: CONSUMED LIMIT EXHAUSTED -->
+      <div id="screenConsumed" class="hidden">
+        <div class="status-icon icon-danger">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        </div>
+        <h1>Лимит скачиваний исчерпан</h1>
+        <p class="subtitle">Этот файл больше нельзя скачать.</p>
+        <button class="btn-secondary" onclick="showUploadScreen()">Создать свой Drop</button>
+      </div>
+
+      <!-- SCREEN 5: EXPIRED -->
+      <div id="screenExpired" class="hidden">
+        <div class="status-icon icon-warning">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <h1>Срок действия истёк</h1>
+        <p class="subtitle">Время хранения файла завершилось.</p>
+        <button class="btn-secondary" onclick="showUploadScreen()">Создать свой Drop</button>
+      </div>
+
+      <!-- SCREEN 6: NOT FOUND -->
+      <div id="screenNotFound" class="hidden">
+        <div class="status-icon icon-warning">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        </div>
+        <h1>Файл не найден</h1>
+        <p class="subtitle">Возможно, ссылка неверна или файл уже удалён.</p>
+        <button class="btn-secondary" onclick="showUploadScreen()">Создать свой Drop</button>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ABOUT MODAL -->
+  <div class="modal" id="aboutModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>О проекте Drop</h2>
+        <button class="close-btn" onclick="closeAboutModal()">&times;</button>
+      </div>
+      <p style="margin-bottom: 12px; color: var(--text-muted); line-height: 1.6;">
+        <strong>Drop</strong> — это сервисный микросервис временной передачи файлов.
+      </p>
+      <ul style="margin-left: 20px; color: var(--text-muted); line-height: 1.8;">
+        <li>Загрузите файл</li>
+        <li>Установите лимит скачиваний и время жизни</li>
+        <li>Поделитесь ссылкой</li>
+        <li>Файл автоматически исчезнет из хранилища</li>
+      </ul>
+    </div>
+  </div>
+
+  <footer>
+    Drop &copy; 2026 — Ephemeral File Sharing
+  </footer>
+
+  <script>
+    let currentPublicId = null;
+    let selectedFile = null;
+
+    // Theme Toggle
+    function toggleTheme() {
+      const isDark = document.body.getAttribute('data-theme') === 'dark';
+      document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      document.getElementById('themeToggleBtn').innerText = isDark ? '☀️' : '🌙';
+    }
+
+    // Drag & Drop Handlers
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('dragover');
+    });
+
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) {
+        fileInput.files = e.dataTransfer.files;
+        handleFileSelect();
+      }
+    });
+
+    fileInput.addEventListener('change', handleFileSelect);
+
+    function handleFileSelect() {
+      if (fileInput.files.length) {
+        selectedFile = fileInput.files[0];
+        document.getElementById('selectedFileName').innerText = selectedFile.name;
+        document.getElementById('selectedFileSize').innerText = formatBytes(selectedFile.size);
+      }
+    }
+
+    function formatBytes(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function hideAllScreens() {
+      const screens = ['screenUpload', 'screenSuccess', 'screenDownload', 'screenConsumed', 'screenExpired', 'screenNotFound'];
+      screens.forEach(s => document.getElementById(s).classList.add('hidden'));
+    }
+
+    function showUploadScreen() {
+      window.history.pushState({}, '', '/');
+      hideAllScreens();
+      document.getElementById('screenUpload').classList.remove('hidden');
+      document.getElementById('progressContainer').style.display = 'none';
+    }
+
+    // Upload Execution
+    function uploadFile() {
+      if (!fileInput.files.length) {
+        alert('Пожалуйста, выберите файл для загрузки');
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('expires_in_seconds', document.getElementById('expiresSelect').value);
+      
+      const maxDownloads = document.getElementById('downloadsSelect').value;
+      if (maxDownloads) {
+        formData.append('max_downloads', maxDownloads);
+      }
+
+      const xhr = new XMLHttpRequest();
+      const progressContainer = document.getElementById('progressContainer');
+      const progressBarFill = document.getElementById('progressBarFill');
+      const progressPercent = document.getElementById('progressPercent');
+      const uploadBtn = document.getElementById('uploadBtn');
+
+      progressContainer.style.display = 'block';
+      uploadBtn.disabled = true;
+
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const percent = Math.round((e.loaded / e.total) * 100);
+          progressBarFill.style.width = percent + '%';
+          progressPercent.innerText = percent + '%';
+        }
+      });
+
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4) {
+          uploadBtn.disabled = false;
+          if (xhr.status === 201) {
+            const res = JSON.parse(xhr.responseText);
+            showSuccessScreen(res);
+          } else {
+            let errText = 'Ошибка загрузки файла';
+            try {
+              const errJson = JSON.parse(xhr.responseText);
+              errText = errJson.error ? errJson.error.message : errText;
+            } catch(e) {}
+            alert(errText);
+          }
+        }
+      };
+
+      xhr.open('POST', '/api/v1/drops', true);
+      xhr.send(formData);
+    }
+
+    function showSuccessScreen(drop) {
+      hideAllScreens();
+      document.getElementById('screenSuccess').classList.remove('hidden');
+      
+      const fullUrl = window.location.origin + '/d/' + drop.public_id;
+      document.getElementById('createdLinkInput').value = fullUrl;
+      document.getElementById('createdFileName').innerText = drop.original_filename;
+      document.getElementById('createdFileSize').innerText = formatBytes(drop.size_bytes);
+      document.getElementById('createdLimit').innerText = drop.max_downloads ? drop.max_downloads : 'Без ограничений';
+    }
+
+    function copyCreatedLink() {
+      const linkInput = document.getElementById('createdLinkInput');
+      linkInput.select();
+      navigator.clipboard.writeText(linkInput.value);
+      
+      const copyBtn = document.getElementById('copyBtn');
+      copyBtn.innerText = 'Скопировано!';
+      setTimeout(() => copyBtn.innerText = 'Копировать', 2000);
+    }
+
+    // Router Check
+    async function checkRoute() {
+      const path = window.location.pathname;
+      const match = path.match(/^\/d\/([a-zA-Z0-9_-]+)/);
+
+      if (match) {
+        currentPublicId = match[1];
+        await loadDropMetadata(currentPublicId);
+      } else {
+        showUploadScreen();
+      }
+    }
+
+    async function loadDropMetadata(publicId) {
+      try {
+        const res = await fetch('/api/v1/drops/' + publicId);
+        if (res.status === 404) {
+          showNotFoundScreen();
+          return;
+        }
+        if (res.status === 410) {
+          showExpiredScreen();
+          return;
+        }
+
+        const data = await res.json();
+        
+        if (data.status === 'EXPIRED') {
+          showExpiredScreen();
+          return;
+        }
+        if (data.status === 'CONSUMED') {
+          showConsumedScreen();
+          return;
+        }
+
+        showDownloadScreen(data);
+      } catch (err) {
+        showNotFoundScreen();
+      }
+    }
+
+    function showDownloadScreen(drop) {
+      hideAllScreens();
+      document.getElementById('screenDownload').classList.remove('hidden');
+      document.getElementById('downloadFileName').innerText = drop.original_filename;
+      document.getElementById('downloadFileSize').innerText = formatBytes(drop.size_bytes);
+      
+      const expDate = new Date(drop.expires_at).toLocaleString();
+      document.getElementById('downloadExpires').innerText = expDate;
+      
+      const remaining = drop.max_downloads ? (drop.max_downloads - drop.download_count) : 'Без ограничений';
+      document.getElementById('downloadRemaining').innerText = remaining;
+    }
+
+    function executeDownload() {
+      if (!currentPublicId) return;
+      window.location.href = '/api/v1/drops/' + currentPublicId + '/download';
+    }
+
+
+    function showConsumedScreen() { hideAllScreens(); document.getElementById('screenConsumed').classList.remove('hidden'); }
+    function showExpiredScreen() { hideAllScreens(); document.getElementById('screenExpired').classList.remove('hidden'); }
+    function showNotFoundScreen() { hideAllScreens(); document.getElementById('screenNotFound').classList.remove('hidden'); }
+
+    function openAboutModal() { document.getElementById('aboutModal').style.display = 'flex'; }
+    function closeAboutModal() { document.getElementById('aboutModal').style.display = 'none'; }
+
+    // Init Route on Page Load
+    window.addEventListener('popstate', checkRoute);
+    checkRoute();
+  </script>
+</body>
+</html>
