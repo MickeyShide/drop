@@ -1,7 +1,6 @@
 import logging
 
 from fastapi import Request
-from redis.exceptions import RedisError
 
 from drop.domain.exceptions import RateLimitExceededError
 from drop.infrastructure.redis import get_redis_client
@@ -55,8 +54,10 @@ class RateLimiter:
                 )
                 raise RateLimitExceededError
 
-        except RedisError as e:
-            # Fail open if Redis is down/unreachable to maintain availability
+        except RateLimitExceededError:
+            raise
+        except Exception as e:
+            # Fail open if Redis is down/unreachable or loop is closed to maintain availability
             logger.warning(
                 "Redis unavailable for rate limiting, failing open",
                 extra={"error": str(e)},

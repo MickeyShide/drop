@@ -1,6 +1,8 @@
-from typing import BinaryIO
+from typing import BinaryIO, TYPE_CHECKING
 import boto3
-from mypy_boto3_s3 import S3Client
+
+if TYPE_CHECKING:
+    from mypy_boto3_s3 import S3Client
 
 from drop.config import get_settings
 
@@ -11,7 +13,7 @@ class S3Storage:
 
         self._bucket = settings.s3_bucket
 
-        self._client: S3Client = boto3.client(
+        self._client: "S3Client" = boto3.client(
             "s3",
             endpoint_url=settings.s3_endpoint,
             aws_access_key_id=settings.s3_access_key,
