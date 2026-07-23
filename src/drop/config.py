@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     database_url: str
 
     rabbitmq_url: str
+    redis_url: str = "redis://localhost:6379/0"
 
     s3_endpoint: str
     s3_access_key: str

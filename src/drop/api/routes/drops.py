@@ -1,8 +1,9 @@
 from typing import Annotated
 
-from fastapi import APIRouter, File, Form, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 
 from drop.api.dependencies import DropServiceDep
+from drop.api.rate_limit import RateLimitCreate, RateLimitDownload, RateLimitMetadata
 from drop.application.schemas import DownloadResponse, DropResponse, ErrorResponse
 
 router = APIRouter(prefix="/api/v1/drops", tags=["drops"])
@@ -22,6 +23,7 @@ ERROR_RESPONSES = {
     "",
     response_model=DropResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(RateLimitCreate)],
     responses=ERROR_RESPONSES,
     summary="Create a new drop file",
 )
@@ -53,6 +55,7 @@ async def create_drop(
 @router.get(
     "/{public_id}",
     response_model=DropResponse,
+    dependencies=[Depends(RateLimitMetadata)],
     responses=ERROR_RESPONSES,
     summary="Get drop metadata by public_id",
 )
@@ -75,6 +78,7 @@ async def get_drop(public_id: str, service: DropServiceDep) -> DropResponse:
 @router.get(
     "/{public_id}/download",
     response_model=DownloadResponse,
+    dependencies=[Depends(RateLimitDownload)],
     responses=ERROR_RESPONSES,
     summary="Get presigned download URL for drop",
 )

@@ -25,3 +25,8 @@ class DropNotReadyError(DropNotAvailableError):
 class FileTooLargeError(DropError):
     pass
 
+
+class RateLimitExceededError(DropError):
+    pass
+
+

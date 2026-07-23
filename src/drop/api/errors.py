@@ -10,6 +10,7 @@ from drop.domain.exceptions import (
     DropNotFoundError,
     DropNotReadyError,
     FileTooLargeError,
+    RateLimitExceededError,
 )
 
 logger = logging.getLogger("drop.api.errors")
@@ -94,6 +95,17 @@ def register_exception_handlers(app: FastAPI) -> None:
             status_code=413,
             code="FILE_TOO_LARGE",
             message="File size exceeds maximum allowed limit.",
+            request=request,
+        )
+
+    @app.exception_handler(RateLimitExceededError)
+    async def rate_limit_exceeded(
+        request: Request, exc: RateLimitExceededError
+    ) -> JSONResponse:
+        return _build_error_response(
+            status_code=429,
+            code="TOO_MANY_REQUESTS",
+            message="Rate limit exceeded. Please try again later.",
             request=request,
         )
 
