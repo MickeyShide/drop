@@ -5,9 +5,11 @@ from drop.api.health import router as health_router
 from drop.api.middleware import RequestIDMiddleware
 from drop.api.routes.drops import router as drops_router
 from drop.config import get_settings
+from drop.logging import setup_logging
 
 
 def create_app() -> FastAPI:
+    setup_logging()
     settings = get_settings()
 
     app = FastAPI(

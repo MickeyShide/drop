@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -23,6 +24,9 @@ from drop.infrastructure.database.models import (
 )
 from drop.infrastructure.repositories.drop import DropRepository
 from drop.infrastructure.storage.s3 import S3Storage
+from drop.logging import drop_id_var
+
+logger = logging.getLogger("drop.service")
 
 
 class DropService:
@@ -76,6 +80,7 @@ class DropService:
         now = datetime.now(UTC)
 
         drop_id = uuid.uuid4()
+        token = drop_id_var.set(str(drop_id))
         public_id = generate_public_id()
         storage_key = f"drops/{drop_id}/source"
 
@@ -89,6 +94,11 @@ class DropService:
         while chunk := await file.read(1024 * 1024):
             size_bytes += len(chunk)
             if size_bytes > settings.max_upload_size_bytes:
+                logger.warning(
+                    "Upload rejected: file size exceeds limit",
+                    extra={"size_bytes": size_bytes, "max_size": settings.max_upload_size_bytes},
+                )
+                drop_id_var.reset(token)
                 raise FileTooLargeError
 
         await file.seek(0)
@@ -117,7 +127,8 @@ class DropService:
                 storage_key,
                 clean_content_type,
             )
-        except Exception:
+        except Exception as e:
+            logger.error("S3 upload failed, marking drop as FAILED", exc_info=e)
             try:
                 await run_in_threadpool(
                     self._storage.delete,
@@ -128,12 +139,19 @@ class DropService:
 
             drop.status = DropStatus.FAILED
             await self._session.commit()
+            drop_id_var.reset(token)
             raise
 
         drop.status = DropStatus.ACTIVE
 
         await self._session.commit()
         await self._session.refresh(drop)
+
+        logger.info(
+            "Drop created successfully",
+            extra={"size_bytes": size_bytes, "public_id": public_id},
+        )
+        drop_id_var.reset(token)
 
         return drop
 

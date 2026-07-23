@@ -1,3 +1,4 @@
+import logging
 import uuid
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -11,6 +12,8 @@ from drop.domain.exceptions import (
     FileTooLargeError,
 )
 
+logger = logging.getLogger("drop.api.errors")
+
 
 def _get_request_id(request: Request) -> str:
     return getattr(request.state, "request_id", str(uuid.uuid4()))
@@ -22,9 +25,17 @@ def _build_error_response(
     message: str,
     request: Request,
     details: dict | list | None = None,
+    exc: Exception | None = None,
 ) -> JSONResponse:
     request_id = _get_request_id(request)
     headers = {"X-Request-ID": request_id}
+
+    log_method = logger.error if status_code >= 500 else logger.warning
+    log_method(
+        f"API Error Response: {code}",
+        extra={"error_code": code, "status_code": status_code},
+        exc_info=exc if status_code >= 500 else None,
+    )
 
     return JSONResponse(
         status_code=status_code,
