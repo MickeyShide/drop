@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     s3_bucket: str
     s3_region: str = "us-east-1"
 
+    max_upload_size_bytes: int = 100 * 1024 * 1024
+
 
 @lru_cache
 def get_settings() -> Settings:

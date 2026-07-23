@@ -6,6 +6,7 @@ from drop.domain.exceptions import (
     DropExpiredError,
     DropNotFoundError,
     DropNotReadyError,
+    FileTooLargeError,
 )
 
 
@@ -69,3 +70,19 @@ def register_exception_handlers(app: FastAPI) -> None:
                 }
             },
         )
+
+    @app.exception_handler(FileTooLargeError)
+    async def file_too_large(
+        request: Request,
+        exc: FileTooLargeError,
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=413,
+            content={
+                "error": {
+                    "code": "FILE_TOO_LARGE",
+                    "message": "File size exceeds maximum allowed limit.",
+                }
+            },
+        )
+

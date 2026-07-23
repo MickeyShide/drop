@@ -20,3 +20,8 @@ class DropConsumedError(DropNotAvailableError):
 
 class DropNotReadyError(DropNotAvailableError):
     pass
+
+
+class FileTooLargeError(DropError):
+    pass
+

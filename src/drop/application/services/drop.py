@@ -5,13 +5,16 @@ from fastapi import UploadFile
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from drop.config import get_settings
 from drop.domain.exceptions import (
     DropConsumedError,
     DropExpiredError,
     DropNotFoundError,
     DropNotReadyError,
+    FileTooLargeError,
 )
 from drop.domain.public_id import generate_public_id
+from drop.domain.sanitization import sanitize_content_type, sanitize_filename
 from drop.infrastructure.database.models import (
     DropModel,
     DropStatus,
@@ -69,11 +72,15 @@ class DropService:
         expires_in_seconds: int,
         max_downloads: int | None,
     ) -> DropModel:
+        settings = get_settings()
         now = datetime.now(UTC)
 
         drop_id = uuid.uuid4()
         public_id = generate_public_id()
         storage_key = f"drops/{drop_id}/source"
+
+        clean_filename = sanitize_filename(file.filename)
+        clean_content_type = sanitize_content_type(file.content_type)
 
         await file.seek(0)
 
@@ -81,15 +88,17 @@ class DropService:
 
         while chunk := await file.read(1024 * 1024):
             size_bytes += len(chunk)
+            if size_bytes > settings.max_upload_size_bytes:
+                raise FileTooLargeError
 
         await file.seek(0)
 
         drop = DropModel(
             id=drop_id,
             public_id=public_id,
-            original_filename=file.filename or "file",
+            original_filename=clean_filename,
             storage_key=storage_key,
-            content_type=file.content_type,
+            content_type=clean_content_type,
             size_bytes=size_bytes,
             status=DropStatus.UPLOADING,
             max_downloads=max_downloads,
@@ -106,9 +115,17 @@ class DropService:
                 self._storage.upload,
                 file.file,
                 storage_key,
-                file.content_type,
+                clean_content_type,
             )
         except Exception:
+            try:
+                await run_in_threadpool(
+                    self._storage.delete,
+                    storage_key,
+                )
+            except Exception:
+                pass
+
             drop.status = DropStatus.FAILED
             await self._session.commit()
             raise
