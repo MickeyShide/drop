@@ -17,4 +17,10 @@ celery_app.conf.update(
     timezone="UTC",
     enable_utc=True,
     worker_enable_remote_control=False,
+    beat_schedule={
+        "cleanup-expired-drops-every-5-minutes": {
+            "task": "drop.cleanup_expired",
+            "schedule": 300.0,
+        },
+    },
 )

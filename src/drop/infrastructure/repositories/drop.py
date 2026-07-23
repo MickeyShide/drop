@@ -70,3 +70,19 @@ class DropRepository:
         result = await self._session.execute(stmt)
 
         return result.scalar_one_or_none()
+
+    async def get_expired_drops(
+        self,
+        now: datetime | None = None,
+    ) -> list[DropModel]:
+        cutoff = now or datetime.now(UTC)
+
+        stmt = select(DropModel).where(
+            DropModel.status == DropStatus.ACTIVE,
+            DropModel.expires_at <= cutoff,
+        )
+
+        result = await self._session.execute(stmt)
+
+        return list(result.scalars().all())
+

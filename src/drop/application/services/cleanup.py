@@ -35,6 +35,25 @@ class DropCleanupService:
         )
 
         drop.status = DropStatus.DELETED
-        drop.deleted_at = datetime.now(UTC)
+        drop.deleted_at = drop.deleted_at or datetime.now(UTC)
 
         await self._session.commit()
+
+    async def cleanup_expired_drops(
+        self,
+        now: datetime | None = None,
+    ) -> list[UUID]:
+        expired_drops = await self._repository.get_expired_drops(now)
+
+        if not expired_drops:
+            return []
+
+        expired_ids: list[UUID] = []
+
+        for drop in expired_drops:
+            drop.status = DropStatus.EXPIRED
+            expired_ids.append(drop.id)
+
+        await self._session.commit()
+
+        return expired_ids

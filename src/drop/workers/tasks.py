@@ -36,3 +36,27 @@ async def _delete_drop_file(drop_id: UUID) -> None:
         )
 
         await service.delete_file(drop_id)
+
+
+@celery_app.task(
+    name="drop.cleanup_expired",
+    acks_late=True,
+)
+def cleanup_expired_drops() -> int:
+    return asyncio.run(_cleanup_expired_drops())
+
+
+async def _cleanup_expired_drops() -> int:
+    async with SessionFactory() as session:
+        service = DropCleanupService(
+            session=session,
+            repository=DropRepository(session),
+            storage=S3Storage(),
+        )
+
+        expired_ids = await service.cleanup_expired_drops()
+
+        for drop_id in expired_ids:
+            delete_drop_file.delay(str(drop_id))
+
+        return len(expired_ids)

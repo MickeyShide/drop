@@ -36,6 +36,10 @@ class DropService:
 
         if drop is not None:
             await self._session.commit()
+            if drop.status == DropStatus.CONSUMED:
+                from drop.workers.tasks import delete_drop_file
+
+                delete_drop_file.delay(str(drop.id))
             return drop
 
         existing = await self._repository.get_by_public_id(public_id)
