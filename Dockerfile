@@ -11,10 +11,10 @@ WORKDIR /app
 
 # Copy dependency files and install dependencies
 COPY pyproject.toml uv.lock README.md ./
-RUN uv sync --frozen --no-install-project --no-dev
-
-# Copy application source code, migrations and configuration
 COPY src ./src
+RUN uv sync --frozen --no-dev
+
+# Copy migrations and configuration
 COPY migrations ./migrations
 COPY alembic.ini ./alembic.ini
 COPY docker/entrypoint.sh ./docker/entrypoint.sh

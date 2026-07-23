@@ -95,7 +95,7 @@ jobs:
             docker compose up -d --build --remove-orphans
 
             echo "4. Running database migrations..."
-            docker compose exec -T api uv run alembic upgrade head
+            docker compose exec -T api alembic upgrade head
 
             echo "5. Verifying container health..."
             docker compose ps
