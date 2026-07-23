@@ -25,6 +25,11 @@ from drop.infrastructure.database.models import (
 from drop.infrastructure.repositories.drop import DropRepository
 from drop.infrastructure.storage.s3 import S3Storage
 from drop.logging import drop_id_var
+from drop.metrics import (
+    DROP_DOWNLOADS_REJECTED_TOTAL,
+    DROP_DOWNLOADS_TOTAL,
+    DROP_UPLOADS_TOTAL,
+)
 
 logger = logging.getLogger("drop.service")
 
@@ -44,6 +49,7 @@ class DropService:
         drop = await self._repository.consume_download(public_id)
 
         if drop is not None:
+            DROP_DOWNLOADS_TOTAL.inc()
             if drop.status == DropStatus.CONSUMED:
                 outbox_event = OutboxEventModel(
                     event_type="DROP_CLEANUP_REQUIRED",
@@ -58,16 +64,20 @@ class DropService:
         existing = await self._repository.get_by_public_id(public_id)
 
         if existing is None:
+            DROP_DOWNLOADS_REJECTED_TOTAL.labels(reason="not_found").inc()
             raise DropNotFoundError
 
         now = datetime.now(UTC)
 
         if existing.expires_at <= now:
+            DROP_DOWNLOADS_REJECTED_TOTAL.labels(reason="expired").inc()
             raise DropExpiredError
 
         if existing.status == DropStatus.CONSUMED:
+            DROP_DOWNLOADS_REJECTED_TOTAL.labels(reason="consumed").inc()
             raise DropConsumedError
 
+        DROP_DOWNLOADS_REJECTED_TOTAL.labels(reason="not_ready").inc()
         raise DropNotReadyError
 
     async def create(
@@ -94,6 +104,7 @@ class DropService:
         while chunk := await file.read(1024 * 1024):
             size_bytes += len(chunk)
             if size_bytes > settings.max_upload_size_bytes:
+                DROP_UPLOADS_TOTAL.labels(status="rejected").inc()
                 logger.warning(
                     "Upload rejected: file size exceeds limit",
                     extra={"size_bytes": size_bytes, "max_size": settings.max_upload_size_bytes},
@@ -128,6 +139,7 @@ class DropService:
                 clean_content_type,
             )
         except Exception as e:
+            DROP_UPLOADS_TOTAL.labels(status="failed").inc()
             logger.error("S3 upload failed, marking drop as FAILED", exc_info=e)
             try:
                 await run_in_threadpool(
@@ -147,6 +159,7 @@ class DropService:
         await self._session.commit()
         await self._session.refresh(drop)
 
+        DROP_UPLOADS_TOTAL.labels(status="success").inc()
         logger.info(
             "Drop created successfully",
             extra={"size_bytes": size_bytes, "public_id": public_id},

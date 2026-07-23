@@ -4,6 +4,7 @@ from drop.api.errors import register_exception_handlers
 from drop.api.health import router as health_router
 from drop.api.middleware import RequestIDMiddleware
 from drop.api.routes.drops import router as drops_router
+from drop.api.routes.metrics import router as metrics_router
 from drop.config import get_settings
 from drop.logging import setup_logging
 
@@ -26,6 +27,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(drops_router)
+    app.include_router(metrics_router)
 
     return app
 

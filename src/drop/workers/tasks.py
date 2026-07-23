@@ -7,6 +7,7 @@ from drop.infrastructure.database.engine import SessionFactory
 from drop.infrastructure.repositories.drop import DropRepository
 from drop.infrastructure.storage.s3 import S3Storage
 from drop.logging import drop_id_var, task_id_var
+from drop.metrics import CELERY_TASK_FAILURES_TOTAL, CLEANUP_RETRIES_TOTAL
 from drop.workers.celery_app import celery_app
 
 logger = logging.getLogger("drop.workers")
@@ -32,6 +33,11 @@ def delete_drop_file(self, drop_id: str) -> None:
     try:
         logger.info("Executing delete_drop_file task", extra={"drop_id": drop_id})
         asyncio.run(_delete_drop_file(UUID(drop_id)))
+    except Exception as e:
+        if self.request.retries > 0:
+            CLEANUP_RETRIES_TOTAL.labels(task_name="drop.delete_file").inc()
+        CELERY_TASK_FAILURES_TOTAL.labels(task_name="drop.delete_file").inc()
+        raise e
     finally:
         task_id_var.reset(token)
 
@@ -61,6 +67,9 @@ def cleanup_expired_drops(self) -> int:
     try:
         logger.info("Executing cleanup_expired_drops task")
         return asyncio.run(_cleanup_expired_drops())
+    except Exception as e:
+        CELERY_TASK_FAILURES_TOTAL.labels(task_name="drop.cleanup_expired").inc()
+        raise e
     finally:
         task_id_var.reset(token)
 
@@ -88,6 +97,9 @@ def publish_outbox_events(self) -> int:
     token = task_id_var.set(str(self.request.id))
     try:
         return asyncio.run(_publish_outbox_events())
+    except Exception as e:
+        CELERY_TASK_FAILURES_TOTAL.labels(task_name="drop.publish_outbox").inc()
+        raise e
     finally:
         task_id_var.reset(token)
 

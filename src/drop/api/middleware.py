@@ -7,6 +7,7 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from drop.logging import request_id_var
+from drop.metrics import HTTP_REQUEST_DURATION_SECONDS, HTTP_REQUESTS_TOTAL
 
 logger = logging.getLogger("drop.api")
 
@@ -29,7 +30,22 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 
         try:
             response = await call_next(request)
-            duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+            duration_sec = time.perf_counter() - start_time
+            duration_ms = round(duration_sec * 1000, 2)
+
+            endpoint = request.url.path
+
+            if endpoint != "/metrics":
+                HTTP_REQUESTS_TOTAL.labels(
+                    method=request.method,
+                    endpoint=endpoint,
+                    status_code=str(response.status_code),
+                ).inc()
+
+                HTTP_REQUEST_DURATION_SECONDS.labels(
+                    method=request.method,
+                    endpoint=endpoint,
+                ).observe(duration_sec)
 
             logger.info(
                 "HTTP Request",
