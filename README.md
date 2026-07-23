@@ -65,33 +65,28 @@
 
 ---
 
-## Tech Stack
+## Dedicated Host Port Range (`4910 - 4917`)
 
-- **Language & Core**: Python 3.13+, FastAPI, Pydantic v2, `uv`
-- **Database & Migration**: PostgreSQL 16, SQLAlchemy 2.x Async, Alembic
-- **Caching & Rate Limiting**: Redis 7
-- **Messaging & Background**: RabbitMQ 4, Celery 5 (Worker & Beat)
-- **Object Storage**: MinIO (S3-compatible)
-- **Infrastructure**: Nginx, Docker, Docker Compose
-- **Observability**: Prometheus Metrics (`/metrics`), Structured JSON Logging (`contextvars`), Health Checks (`/health/live`, `/health/ready`)
+To avoid collisions with other projects on shared servers, Drop uses a dedicated host port range:
+
+- **API Service**: `http://localhost:4910` (Swagger Docs: `http://localhost:4910/docs`)
+- **Nginx Entrypoint**: `http://localhost:4917`
+- **PostgreSQL**: `localhost:4911`
+- **Redis**: `localhost:4912`
+- **MinIO S3 API**: `http://localhost:4913`
+- **MinIO Console**: `http://localhost:4914` (User: `drop`, Password: `dropdropdrop`)
+- **RabbitMQ AMQP**: `localhost:4915`
+- **RabbitMQ Management**: `http://localhost:4916` (User: `drop`, Password: `dropdropdrop`)
 
 ---
 
 ## Quick Start (Docker Compose)
 
-Start the entire 8-container architecture with a single command:
+Start the entire architecture with a single command:
 
 ```powershell
 docker compose up -d --build
 ```
-
-Access services:
-- **API Service**: `http://localhost:8000` (or `http://localhost` via Nginx)
-- **Swagger Documentation**: `http://localhost:8000/docs`
-- **Prometheus Metrics**: `http://localhost:8000/metrics`
-- **Health / Readiness**: `http://localhost:8000/health/ready`
-- **MinIO Web Console**: `http://localhost:9001` (User: `drop`, Password: `dropdropdrop`)
-- **RabbitMQ Management**: `http://localhost:15672` (User: `drop`, Password: `dropdropdrop`)
 
 ---
 

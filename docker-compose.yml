@@ -2,7 +2,7 @@ services:
   nginx:
     image: nginx:alpine
     ports:
-      - "${NGINX_PORT:-80}:80"
+      - "${NGINX_PORT:-4917}:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
@@ -15,7 +15,7 @@ services:
       dockerfile: Dockerfile
     command: api
     ports:
-      - "${API_PORT:-8000}:8000"
+      - "${API_PORT:-4910}:8000"
     environment:
       - APP_NAME=Drop
       - APP_ENV=production
@@ -94,7 +94,7 @@ services:
       POSTGRES_USER: drop
       POSTGRES_PASSWORD: drop
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "${POSTGRES_PORT:-4911}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -110,8 +110,8 @@ services:
       MINIO_ROOT_USER: drop
       MINIO_ROOT_PASSWORD: dropdropdrop
     ports:
-      - "${MINIO_PORT:-9005}:9000"
-      - "${MINIO_CONSOLE_PORT:-9006}:9001"
+      - "${MINIO_PORT:-4913}:9000"
+      - "${MINIO_CONSOLE_PORT:-4914}:9001"
     volumes:
       - minio_data:/data
 
@@ -121,8 +121,8 @@ services:
       RABBITMQ_DEFAULT_USER: drop
       RABBITMQ_DEFAULT_PASS: dropdropdrop
     ports:
-      - "${RABBITMQ_PORT:-5673}:5672"
-      - "${RABBITMQ_MGMT_PORT:-15673}:15672"
+      - "${RABBITMQ_PORT:-4915}:5672"
+      - "${RABBITMQ_MGMT_PORT:-4916}:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
@@ -134,7 +134,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "${REDIS_PORT:-6380}:6379"
+      - "${REDIS_PORT:-4912}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
