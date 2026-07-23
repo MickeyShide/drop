@@ -70,18 +70,22 @@ jobs:
           port: ${{ secrets.SERVER_PORT || 22 }}
           script: |
             set -e
-            TARGET_DIR="${{ secrets.TARGET_DIR || '/opt/drop' }}"
+            TARGET_DIR="${{ secrets.TARGET_DIR }}"
+            if [ -z "$TARGET_DIR" ]; then
+              TARGET_DIR="$HOME/drop"
+            fi
             
             echo "1. Navigating to project directory: $TARGET_DIR"
-            if [ ! -d "$TARGET_DIR" ]; then
-              mkdir -p "$TARGET_DIR"
-              git clone https://github.com/${{ github.repository }}.git "$TARGET_DIR"
-            fi
+            mkdir -p "$TARGET_DIR"
             cd "$TARGET_DIR"
 
             echo "2. Pulling latest changes..."
-            git fetch --all
-            git reset --hard origin/${{ github.ref_name }}
+            if [ ! -d ".git" ]; then
+              git clone https://github.com/${{ github.repository }}.git .
+            else
+              git fetch --all
+              git reset --hard origin/${{ github.ref_name }}
+            fi
 
             echo "3. Rebuilding Docker Compose containers..."
             docker compose up -d --build --remove-orphans
