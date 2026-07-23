@@ -35,6 +35,14 @@ jobs:
         run: uv run mypy src
 
       - name: 3. Pytest (Unit & Integration Tests)
+        env:
+          DATABASE_URL: postgresql+asyncpg://drop:drop@localhost:5432/drop_test
+          RABBITMQ_URL: amqp://drop:drop@localhost:5672/
+          REDIS_URL: redis://localhost:6379/0
+          S3_ENDPOINT: http://localhost:9000
+          S3_ACCESS_KEY: drop
+          S3_SECRET_KEY: dropdropdrop
+          S3_BUCKET: drop-test
         run: uv run pytest -v
 
       - name: 4. Set up Docker Buildx
