@@ -1,5 +1,4 @@
 import os
-import re
 
 
 def sanitize_filename(filename: str | None) -> str:

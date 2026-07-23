@@ -51,7 +51,7 @@ async def main() -> None:
 
         print(f"\n3. Results (elapsed {elapsed:.2f}s):")
         print(f"   Concurrent clients: {concurrent_clients}")
-        print(f"   Download limit:     1")
+        print("   Download limit:     1")
         print(f"   Successful:         {success_count}")
         print(f"   Rejected:           {rejected_count}")
 

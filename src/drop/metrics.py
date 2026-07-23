@@ -1,4 +1,4 @@
-from prometheus_client import Counter, Histogram, REGISTRY
+from prometheus_client import Counter, Histogram
 
 # HTTP Metrics
 HTTP_REQUESTS_TOTAL = Counter(

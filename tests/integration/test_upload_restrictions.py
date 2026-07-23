@@ -70,8 +70,6 @@ async def test_s3_upload_failure_triggers_cleanup_and_failed_status(
 ) -> None:
     file_obj = UploadFile(filename="../../secret.txt", file=io.BytesIO(b"test content"))
 
-    dummy_storage = DummyS3Storage()
-
     class FailingStorage(DummyS3Storage):
         def upload(self, file, storage_key, content_type) -> None:
             raise RuntimeError("S3 connection lost")

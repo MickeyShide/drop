@@ -1,5 +1,5 @@
 from datetime import UTC, datetime, timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from sqlalchemy import select
@@ -9,7 +9,6 @@ from drop.application.services.cleanup import DropCleanupService
 from drop.application.services.drop import DropService
 from drop.infrastructure.database.models import DropModel, DropStatus
 from drop.infrastructure.repositories.drop import DropRepository
-from drop.infrastructure.storage.s3 import S3Storage
 from tests.integration.factories import create_active_drop
 
 
@@ -31,7 +30,6 @@ async def test_cleanup_service_is_idempotent(
     async with session_factory() as session:
         drop = await create_active_drop(session, max_downloads=1)
         drop_id = drop.id
-        storage_key = drop.storage_key
 
     dummy_storage = DummyS3Storage()
 

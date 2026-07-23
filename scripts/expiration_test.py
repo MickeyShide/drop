@@ -1,6 +1,5 @@
 import asyncio
 import io
-import time
 import httpx
 
 BASE_URL = "http://localhost:8000"
