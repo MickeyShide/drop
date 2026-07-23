@@ -15,7 +15,10 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 existing_url = config.get_main_option("sqlalchemy.url")
-if not existing_url or existing_url in ("%(DATABASE_URL)s", "driver://user:pass@localhost/dbname"):
+if not existing_url or existing_url in (
+    "postgresql+asyncpg://drop:drop@localhost:5432/drop",
+    "driver://user:pass@localhost/dbname",
+):
     settings = get_settings()
     config.set_main_option(
         "sqlalchemy.url",
