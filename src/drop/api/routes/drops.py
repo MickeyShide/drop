@@ -1,19 +1,26 @@
+from typing import Annotated
 from drop.domain.exceptions import DropNotFoundError
-from fastapi import APIRouter, status, HTTPException
+from fastapi import APIRouter, File, Form, UploadFile, status, HTTPException
 
 from drop.api.dependencies import DropServiceDep
-from drop.application.schemas import (
-    CreateDropRequest,
-    DropResponse,
-)
+from drop.application.schemas import DropResponse
 
 
 router = APIRouter(prefix="/api/v1/drops", tags=["drops"])
 
 
 @router.post("", response_model=DropResponse, status_code=status.HTTP_201_CREATED)
-async def create_drop(data: CreateDropRequest, service: DropServiceDep) -> DropResponse:
-    drop = await service.create(data)
+async def create_drop(
+    service: DropServiceDep,
+    file: Annotated[UploadFile, File()],
+    expires_in_seconds: Annotated[int, Form(gt=0)],
+    max_downloads: Annotated[int | None, Form(gt=0)] = None,
+) -> DropResponse:
+    drop = await service.create(
+        file=file,
+        expires_in_seconds=expires_in_seconds,
+        max_downloads=max_downloads,
+    )
 
     return DropResponse(
         public_id=drop.public_id,
