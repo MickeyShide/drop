@@ -1,7 +1,6 @@
-from celery import Celery
+from celery import Celery  # type: ignore[import-untyped]
 
 from drop.config import get_settings
-
 
 settings = get_settings()
 

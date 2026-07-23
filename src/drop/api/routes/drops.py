@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 
@@ -8,7 +8,7 @@ from drop.application.schemas import DownloadResponse, DropResponse, ErrorRespon
 
 router = APIRouter(prefix="/api/v1/drops", tags=["drops"])
 
-ERROR_RESPONSES = {
+ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     400: {"model": ErrorResponse, "description": "Bad Request / Validation Error"},
     404: {"model": ErrorResponse, "description": "Drop Not Found"},
     409: {"model": ErrorResponse, "description": "Drop Conflict / Not Ready"},
