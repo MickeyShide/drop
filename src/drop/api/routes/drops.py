@@ -1,3 +1,4 @@
+from drop.application.schemas import DownloadResponse
 from typing import Annotated
 from drop.domain.exceptions import DropNotFoundError
 from fastapi import APIRouter, File, Form, UploadFile, status, HTTPException
@@ -37,13 +38,7 @@ async def create_drop(
 
 @router.get("/{public_id}", response_model=DropResponse)
 async def get_drop(public_id: str, service: DropServiceDep) -> DropResponse:
-    try:
-        drop = await service.get_by_public_id(public_id)
-    except DropNotFoundError as exc:
-        raise HTTPException(
-            status_code=404,
-            detail="Drop not found",
-        ) from exc
+    drop = await service.get_by_public_id(public_id)
 
     return DropResponse(
         public_id=drop.public_id,
@@ -56,3 +51,10 @@ async def get_drop(public_id: str, service: DropServiceDep) -> DropResponse:
         expires_at=drop.expires_at,
         created_at=drop.created_at,
     )
+
+
+@router.get("/{public_id}/download", response_model=DownloadResponse)
+async def download_drop(public_id: str, service: DropServiceDep) -> DownloadResponse:
+    url = await service.get_download_url(public_id)
+
+    return DownloadResponse(url=url, expires_in=60)

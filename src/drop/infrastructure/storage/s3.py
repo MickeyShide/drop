@@ -48,3 +48,17 @@ class S3Storage:
             return False
 
         return True
+
+    def create_download_url(
+        self,
+        storage_key: str,
+        expires_in: int = 60,
+    ) -> str:
+        return self._client.generate_presigned_url(
+            ClientMethod="get_object",
+            Params={
+                "Bucket": self._bucket,
+                "Key": storage_key,
+            },
+            ExpiresIn=expires_in,
+        )

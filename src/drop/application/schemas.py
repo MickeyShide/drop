@@ -12,3 +12,7 @@ class DropResponse(BaseModel):
     download_count: int
     expires_at: datetime
     created_at: datetime
+
+class DownloadResponse(BaseModel):
+    url: str
+    expires_in: int

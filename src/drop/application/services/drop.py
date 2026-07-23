@@ -1,3 +1,7 @@
+from drop.domain import public_id
+from drop.domain.exceptions import DropExpiredError
+from drop.domain.exceptions import DropNotReadyError
+from drop.domain.exceptions import DropConsumedError
 from drop.infrastructure.storage.s3 import S3Storage
 from fastapi import UploadFile
 import uuid
@@ -20,6 +24,31 @@ class DropService:
         self._session = session
         self._repository = repository
         self._storage = storage
+
+    async def consume_download(
+        self,
+        public_id: str,
+    ) -> DropModel:
+        drop = await self._repository.consume_download(public_id)
+
+        if drop is not None:
+            await self._session.commit()
+            return drop
+
+        existing = await self._repository.get_by_public_id(public_id)
+
+        if existing is None:
+            raise DropNotFoundError
+
+        now = datetime.now(UTC)
+
+        if existing.expires_at <= now:
+            raise DropExpiredError
+
+        if existing.status == DropStatus.CONSUMED:
+            raise DropConsumedError
+
+        raise DropNotReadyError
 
     async def create(
         self,
@@ -83,3 +112,15 @@ class DropService:
         if drop is None:
             raise DropNotFoundError
         return drop
+
+    async def get_download_url(
+        self,
+        public_id: str,
+    ) -> str:
+        drop = await self.consume_download(public_id)
+
+        return await run_in_threadpool(
+            self._storage.create_download_url,
+            drop.storage_key,
+            60,
+        )

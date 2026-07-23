@@ -4,3 +4,19 @@ class DropError(Exception):
 
 class DropNotFoundError(DropError):
     pass
+
+
+class DropNotAvailableError(DropError):
+    pass
+
+
+class DropExpiredError(DropNotAvailableError):
+    pass
+
+
+class DropConsumedError(DropNotAvailableError):
+    pass
+
+
+class DropNotReadyError(DropNotAvailableError):
+    pass
