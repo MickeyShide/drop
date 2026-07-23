@@ -3,13 +3,28 @@ from typing import Annotated
 from fastapi import APIRouter, File, Form, UploadFile, status
 
 from drop.api.dependencies import DropServiceDep
-from drop.application.schemas import DownloadResponse, DropResponse
-
+from drop.application.schemas import DownloadResponse, DropResponse, ErrorResponse
 
 router = APIRouter(prefix="/api/v1/drops", tags=["drops"])
 
+ERROR_RESPONSES = {
+    400: {"model": ErrorResponse, "description": "Bad Request / Validation Error"},
+    404: {"model": ErrorResponse, "description": "Drop Not Found"},
+    409: {"model": ErrorResponse, "description": "Drop Conflict / Not Ready"},
+    410: {"model": ErrorResponse, "description": "Drop Expired or Consumed"},
+    413: {"model": ErrorResponse, "description": "Payload Too Large"},
+    429: {"model": ErrorResponse, "description": "Too Many Requests"},
+    500: {"model": ErrorResponse, "description": "Internal Server Error"},
+}
 
-@router.post("", response_model=DropResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "",
+    response_model=DropResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses=ERROR_RESPONSES,
+    summary="Create a new drop file",
+)
 async def create_drop(
     service: DropServiceDep,
     file: Annotated[UploadFile, File()],
@@ -35,7 +50,12 @@ async def create_drop(
     )
 
 
-@router.get("/{public_id}", response_model=DropResponse)
+@router.get(
+    "/{public_id}",
+    response_model=DropResponse,
+    responses=ERROR_RESPONSES,
+    summary="Get drop metadata by public_id",
+)
 async def get_drop(public_id: str, service: DropServiceDep) -> DropResponse:
     drop = await service.get_by_public_id(public_id)
 
@@ -52,7 +72,12 @@ async def get_drop(public_id: str, service: DropServiceDep) -> DropResponse:
     )
 
 
-@router.get("/{public_id}/download", response_model=DownloadResponse)
+@router.get(
+    "/{public_id}/download",
+    response_model=DownloadResponse,
+    responses=ERROR_RESPONSES,
+    summary="Get presigned download URL for drop",
+)
 async def download_drop(public_id: str, service: DropServiceDep) -> DownloadResponse:
     url = await service.get_download_url(public_id)
 

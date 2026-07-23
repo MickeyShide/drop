@@ -18,3 +18,15 @@ class DropResponse(BaseModel):
 class DownloadResponse(BaseModel):
     url: str
     expires_in: int
+
+
+class ErrorDetail(BaseModel):
+    code: str
+    message: str
+    details: dict | list | None = None
+
+
+class ErrorResponse(BaseModel):
+    error: ErrorDetail
+    request_id: str
+
