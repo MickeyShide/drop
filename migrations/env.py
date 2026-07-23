@@ -6,28 +6,29 @@ from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from drop.config import get_settings
-from drop.infrastructure.database.base import Base
 from drop.infrastructure.database import models  # noqa: F401
-
+from drop.infrastructure.database.base import Base
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-settings = get_settings()
-
-config.set_main_option(
-    "sqlalchemy.url",
-    settings.database_url,
-)
+existing_url = config.get_main_option("sqlalchemy.url")
+if not existing_url or existing_url == "%(DATABASE_URL)s":
+    settings = get_settings()
+    config.set_main_option(
+        "sqlalchemy.url",
+        settings.database_url,
+    )
 
 target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
+    url = config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=settings.database_url,
+        url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},

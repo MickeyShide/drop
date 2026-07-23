@@ -23,7 +23,7 @@ async def test_delete_drop_file_task_execution_and_idempotency(
         await session.commit()
         drop_id = drop.id
 
-    with patch("drop.application.services.cleanup.S3Storage") as mock_s3_cls, \
+    with patch("drop.workers.tasks.S3Storage") as mock_s3_cls, \
          patch("drop.workers.tasks.SessionFactory", session_factory):
         mock_storage = mock_s3_cls.return_value
         mock_storage.delete = AsyncMock()
