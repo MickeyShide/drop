@@ -16,6 +16,8 @@ class Settings(BaseSettings):
 
     database_url: str
 
+    rabbitmq_url: str
+
     s3_endpoint: str
     s3_access_key: str
     s3_secret_key: str

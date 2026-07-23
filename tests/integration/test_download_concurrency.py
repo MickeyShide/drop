@@ -14,7 +14,6 @@ from drop.infrastructure.repositories.drop import DropRepository
 from tests.integration.factories import create_active_drop
 
 
-
 @pytest.mark.asyncio
 async def test_single_download_limit_is_atomic(
     session_factory: async_sessionmaker[AsyncSession],

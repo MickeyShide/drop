@@ -46,9 +46,7 @@ def to_async_url(url: str) -> str:
 async def engine(
     postgres_container: PostgresContainer,
 ) -> AsyncIterator[AsyncEngine]:
-    async_url = to_async_url(
-        postgres_container.get_connection_url()
-    )
+    async_url = to_async_url(postgres_container.get_connection_url())
 
     engine = create_async_engine(
         async_url,

@@ -43,10 +43,7 @@ class DropRepository:
                 status=case(
                     (
                         DropModel.max_downloads.is_not(None)
-                        & (
-                            DropModel.download_count + 1
-                            >= DropModel.max_downloads
-                        ),
+                        & (DropModel.download_count + 1 >= DropModel.max_downloads),
                         DropStatus.CONSUMED,
                     ),
                     else_=DropModel.status,

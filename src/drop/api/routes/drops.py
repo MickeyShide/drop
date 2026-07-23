@@ -1,7 +1,6 @@
 from drop.application.schemas import DownloadResponse
 from typing import Annotated
-from drop.domain.exceptions import DropNotFoundError
-from fastapi import APIRouter, File, Form, UploadFile, status, HTTPException
+from fastapi import APIRouter, File, Form, UploadFile, status
 
 from drop.api.dependencies import DropServiceDep
 from drop.application.schemas import DropResponse

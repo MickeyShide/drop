@@ -19,7 +19,9 @@ class S3Storage:
             region_name=settings.s3_region,
         )
 
-    def upload(self, file: BinaryIO, storage_key: str, content_type: str | None) -> None:
+    def upload(
+        self, file: BinaryIO, storage_key: str, content_type: str | None
+    ) -> None:
         extra_args: dict[str, str] = {}
 
         if content_type:

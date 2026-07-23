@@ -5,6 +5,7 @@ from drop.api.routes.drops import router as drops_router
 from drop.config import get_settings
 from drop.api.errors import register_exception_handlers
 
+
 def create_app() -> FastAPI:
     settings = get_settings()
 

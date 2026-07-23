@@ -1,4 +1,3 @@
-from drop.domain import public_id
 from drop.domain.exceptions import DropExpiredError
 from drop.domain.exceptions import DropNotReadyError
 from drop.domain.exceptions import DropConsumedError
@@ -20,7 +19,9 @@ from drop.infrastructure.repositories.drop import DropRepository
 
 
 class DropService:
-    def __init__(self, session: AsyncSession, repository: DropRepository, storage: S3Storage) -> None:
+    def __init__(
+        self, session: AsyncSession, repository: DropRepository, storage: S3Storage
+    ) -> None:
         self._session = session
         self._repository = repository
         self._storage = storage
