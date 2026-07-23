@@ -15,6 +15,8 @@ from drop.domain.public_id import generate_public_id
 from drop.infrastructure.database.models import (
     DropModel,
     DropStatus,
+    OutboxEventModel,
+    OutboxStatus,
 )
 from drop.infrastructure.repositories.drop import DropRepository
 from drop.infrastructure.storage.s3 import S3Storage
@@ -35,11 +37,15 @@ class DropService:
         drop = await self._repository.consume_download(public_id)
 
         if drop is not None:
-            await self._session.commit()
             if drop.status == DropStatus.CONSUMED:
-                from drop.workers.tasks import delete_drop_file
+                outbox_event = OutboxEventModel(
+                    event_type="DROP_CLEANUP_REQUIRED",
+                    payload={"drop_id": str(drop.id)},
+                    status=OutboxStatus.PENDING,
+                )
+                self._session.add(outbox_event)
 
-                delete_drop_file.delay(str(drop.id))
+            await self._session.commit()
             return drop
 
         existing = await self._repository.get_by_public_id(public_id)

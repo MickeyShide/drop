@@ -22,5 +22,9 @@ celery_app.conf.update(
             "task": "drop.cleanup_expired",
             "schedule": 300.0,
         },
+        "publish-outbox-events-every-10-seconds": {
+            "task": "drop.publish_outbox",
+            "schedule": 10.0,
+        },
     },
 )

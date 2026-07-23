@@ -85,18 +85,28 @@ async def test_consumed_drop_automatically_enqueues_cleanup(
 
     dummy_storage = DummyS3Storage()
 
+    async with session_factory() as session:
+        repository = DropRepository(session)
+        service = DropService(
+            session=session,
+            repository=repository,
+            storage=dummy_storage,  # type: ignore[arg-type]
+        )
+
+        consumed_drop = await service.consume_download(public_id)
+        assert consumed_drop.status == DropStatus.CONSUMED
+
     with patch("drop.workers.tasks.delete_drop_file.delay") as mock_delay:
         async with session_factory() as session:
-            repository = DropRepository(session)
-            service = DropService(
+            from drop.application.services.outbox import OutboxPublisherService
+            from drop.infrastructure.repositories.outbox import OutboxRepository
+
+            publisher = OutboxPublisherService(
                 session=session,
-                repository=repository,
-                storage=dummy_storage,  # type: ignore[arg-type]
+                repository=OutboxRepository(session),
             )
-
-            consumed_drop = await service.consume_download(public_id)
-
-            assert consumed_drop.status == DropStatus.CONSUMED
+            count = await publisher.publish_pending_events()
+            assert count == 1
             mock_delay.assert_called_once_with(str(drop_id))
 
 

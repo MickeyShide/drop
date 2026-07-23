@@ -55,8 +55,26 @@ async def _cleanup_expired_drops() -> int:
         )
 
         expired_ids = await service.cleanup_expired_drops()
+        return len(expired_ids)
 
-        for drop_id in expired_ids:
-            delete_drop_file.delay(str(drop_id))
 
-        return len(expired_ids)
+@celery_app.task(
+    name="drop.publish_outbox",
+    acks_late=True,
+)
+def publish_outbox_events() -> int:
+    return asyncio.run(_publish_outbox_events())
+
+
+async def _publish_outbox_events() -> int:
+    async with SessionFactory() as session:
+        from drop.application.services.outbox import OutboxPublisherService
+        from drop.infrastructure.repositories.outbox import OutboxRepository
+
+        service = OutboxPublisherService(
+            session=session,
+            repository=OutboxRepository(session),
+        )
+
+        return await service.publish_pending_events()
+

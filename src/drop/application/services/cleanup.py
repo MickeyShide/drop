@@ -4,7 +4,11 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
-from drop.infrastructure.database.models import DropStatus
+from drop.infrastructure.database.models import (
+    DropStatus,
+    OutboxEventModel,
+    OutboxStatus,
+)
 from drop.infrastructure.repositories.drop import DropRepository
 from drop.infrastructure.storage.s3 import S3Storage
 
@@ -53,6 +57,12 @@ class DropCleanupService:
         for drop in expired_drops:
             drop.status = DropStatus.EXPIRED
             expired_ids.append(drop.id)
+            outbox_event = OutboxEventModel(
+                event_type="DROP_CLEANUP_REQUIRED",
+                payload={"drop_id": str(drop.id)},
+                status=OutboxStatus.PENDING,
+            )
+            self._session.add(outbox_event)
 
         await self._session.commit()
 
