@@ -1,4 +1,33 @@
-from prometheus_client import Counter, Histogram
+import os
+from pathlib import Path
+
+from prometheus_client import (
+    CollectorRegistry,
+    Counter,
+    Histogram,
+    generate_latest,
+    multiprocess,
+)
+
+
+def setup_metrics() -> None:
+    """Prepare shared Prometheus multiprocess storage when configured."""
+    directory = os.environ.get("PROMETHEUS_MULTIPROC_DIR")
+    if directory:
+        Path(directory).mkdir(parents=True, exist_ok=True)
+
+
+def generate_metrics() -> bytes:
+    """Collect API and worker counters from the shared multiprocess registry."""
+    if not os.environ.get("PROMETHEUS_MULTIPROC_DIR"):
+        return generate_latest()
+
+    registry = CollectorRegistry()
+    multiprocess.MultiProcessCollector(registry)
+    return generate_latest(registry)
+
+
+setup_metrics()
 
 # HTTP Metrics
 HTTP_REQUESTS_TOTAL = Counter(

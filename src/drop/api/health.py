@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from drop.infrastructure.database.engine import get_session
 from drop.infrastructure.redis import get_redis_client
 from drop.infrastructure.storage.s3 import S3Storage
+from drop.workers.celery_app import check_broker_connection
 
 router = APIRouter(tags=["health"])
 
@@ -46,7 +47,15 @@ async def readiness(
         checks["redis"] = f"failed: {e}"
         is_ready = False
 
-    # 3. MinIO (S3) check
+    # 3. RabbitMQ broker check
+    try:
+        await run_in_threadpool(check_broker_connection)
+        checks["rabbitmq"] = "ok"
+    except Exception as e:
+        checks["rabbitmq"] = f"failed: {e}"
+        is_ready = False
+
+    # 4. MinIO (S3) check
     try:
         storage = S3Storage()
         await run_in_threadpool(storage._client.list_buckets)

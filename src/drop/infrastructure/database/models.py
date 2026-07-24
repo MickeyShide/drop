@@ -22,7 +22,6 @@ from drop.infrastructure.database.base import Base
 
 class DropStatus(str, enum.Enum):
     UPLOADING = "UPLOADING"
-    PROCESSING = "PROCESSING"
     ACTIVE = "ACTIVE"
     CONSUMED = "CONSUMED"
     EXPIRED = "EXPIRED"
@@ -33,6 +32,7 @@ class DropStatus(str, enum.Enum):
 
 class OutboxStatus(str, enum.Enum):
     PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
     PROCESSED = "PROCESSED"
     FAILED = "FAILED"
 
@@ -206,6 +206,22 @@ class OutboxEventModel(Base):
 
     processed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
+        nullable=True,
+    )
+
+    attempts: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+    )
+
+    locked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    last_error: Mapped[str | None] = mapped_column(
+        String(512),
         nullable=True,
     )
 

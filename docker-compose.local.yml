@@ -52,6 +52,9 @@ services:
       RATE_LIMIT_DOWNLOAD_PER_SESSION_MAX: "10"
       RATE_LIMIT_DOWNLOAD_PER_SESSION_WINDOW: "60"
       DOWNLOAD_STREAM_LOCK_SECONDS: "300"
+      PROMETHEUS_MULTIPROC_DIR: /tmp/prometheus
+    volumes:
+      - prometheus_multiproc_local_data:/tmp/prometheus
     depends_on:
       postgres:
         condition: service_healthy
@@ -107,6 +110,9 @@ services:
       RATE_LIMIT_DOWNLOAD_PER_SESSION_MAX: "10"
       RATE_LIMIT_DOWNLOAD_PER_SESSION_WINDOW: "60"
       DOWNLOAD_STREAM_LOCK_SECONDS: "300"
+      PROMETHEUS_MULTIPROC_DIR: /tmp/prometheus
+    volumes:
+      - prometheus_multiproc_local_data:/tmp/prometheus
     depends_on:
       postgres:
         condition: service_healthy
@@ -155,6 +161,9 @@ services:
       RATE_LIMIT_DOWNLOAD_PER_SESSION_MAX: "10"
       RATE_LIMIT_DOWNLOAD_PER_SESSION_WINDOW: "60"
       DOWNLOAD_STREAM_LOCK_SECONDS: "300"
+      PROMETHEUS_MULTIPROC_DIR: /tmp/prometheus
+    volumes:
+      - prometheus_multiproc_local_data:/tmp/prometheus
     depends_on:
       postgres:
         condition: service_healthy
@@ -213,3 +222,4 @@ volumes:
   minio_local_data:
   rabbitmq_local_data:
   redis_local_data:
+  prometheus_multiproc_local_data:

@@ -13,28 +13,41 @@ class OutboxPublisherService:
         self._repository = repository
 
     async def publish_pending_events(self, batch_size: int = 100) -> int:
-        events = await self._repository.get_pending_events(batch_size=batch_size)
+        events = await self._repository.claim_pending_events(batch_size=batch_size)
 
         if not events:
             return 0
 
-        from drop.workers.tasks import delete_drop_file
-
-        processed_ids = []
-
-        for event in events:
-            if event.event_type in (
-                "DROP_CLEANUP_REQUIRED",
-                "DROP_CLEANUP_REQUESTED",
-                "DROP_EXPIRED",
-            ):
-                drop_id = event.payload.get("drop_id")
-                if drop_id:
-                    delete_drop_file.delay(str(drop_id))
-
-            processed_ids.append(event.id)
-
-        await self._repository.mark_processed(processed_ids)
+        # Persist the claim before broker I/O. A crashed publisher leaves a
+        # recoverable PROCESSING event which can be reclaimed after its lease.
         await self._session.commit()
 
-        return len(processed_ids)
+        from drop.workers.tasks import delete_drop_file
+
+        published_count = 0
+
+        for event in events:
+            try:
+                if event.event_type != "DROP_CLEANUP_REQUIRED":
+                    raise ValueError(
+                        f"Unsupported outbox event type: {event.event_type}"
+                    )
+                drop_id = event.payload.get("drop_id")
+                if not isinstance(drop_id, str) or not drop_id:
+                    raise ValueError("Outbox cleanup event has no drop_id")
+
+                # A stable task ID makes duplicate publication traceable. It
+                # does not claim exactly-once broker delivery; the delete task
+                # remains deliberately idempotent.
+                delete_drop_file.apply_async(
+                    args=[drop_id],
+                    task_id=str(event.id),
+                )
+                await self._repository.mark_processed([event.id])
+                await self._session.commit()
+                published_count += 1
+            except Exception as exc:
+                await self._repository.mark_delivery_failure(event, exc)
+                await self._session.commit()
+
+        return published_count

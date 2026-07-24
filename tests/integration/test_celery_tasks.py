@@ -97,9 +97,9 @@ async def test_publish_outbox_events_task(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     with (
-        patch("drop.workers.tasks.delete_drop_file.delay") as mock_delay,
+        patch("drop.workers.tasks.delete_drop_file.apply_async") as mock_apply_async,
         patch("drop.workers.tasks.SessionFactory", session_factory),
     ):
-        mock_delay.return_value = None
+        mock_apply_async.return_value = None
         processed = await _publish_outbox_events()
         assert isinstance(processed, int)

@@ -367,13 +367,7 @@ class DropService:
         if drop.status == DropStatus.CONSUMED:
             active_grants = await self._repository.count_active_grants(drop.id)
             if active_grants == 0:
-                existing_event = await self._session.execute(
-                    select(OutboxEventModel).where(
-                        OutboxEventModel.event_type == "DROP_CLEANUP_REQUIRED",
-                        OutboxEventModel.payload["drop_id"].as_string() == str(drop.id),
-                    )
-                )
-                if existing_event.scalar_one_or_none() is None:
+                if not await self._outbox_repo.has_open_cleanup_event(drop.id):
                     self._session.add(
                         OutboxEventModel(
                             event_type="DROP_CLEANUP_REQUIRED",

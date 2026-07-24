@@ -54,15 +54,18 @@ class S3Storage:
         )
 
     def exists(self, storage_key: str) -> bool:
+        return self.get_object_metadata(storage_key) is not None
+
+    def get_object_metadata(self, storage_key: str) -> tuple[int, str | None] | None:
         try:
-            self._client.head_object(
+            response = self._client.head_object(
                 Bucket=self._bucket,
                 Key=storage_key,
             )
         except self._client.exceptions.ClientError:
-            return False
+            return None
 
-        return True
+        return int(response.get("ContentLength", 0)), response.get("ContentType")
 
     def create_download_url(
         self,

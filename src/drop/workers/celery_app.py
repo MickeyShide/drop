@@ -1,6 +1,9 @@
 from celery import Celery  # type: ignore[import-untyped]
+from celery.signals import beat_init, worker_process_init  # type: ignore[import-untyped]
 
 from drop.config import get_settings
+from drop.logging import setup_logging
+from drop.metrics import setup_metrics
 
 settings = get_settings()
 
@@ -27,3 +30,21 @@ celery_app.conf.update(
         },
     },
 )
+
+
+def _configure_observability(**_: object) -> None:
+    setup_metrics()
+    setup_logging()
+
+
+worker_process_init.connect(_configure_observability)
+beat_init.connect(_configure_observability)
+
+
+def check_broker_connection(app: Celery | None = None) -> None:
+    """Synchronously verify the RabbitMQ broker for the readiness endpoint."""
+    connection = (app or celery_app).connection_for_read()
+    try:
+        connection.ensure_connection(max_retries=0)
+    finally:
+        connection.release()

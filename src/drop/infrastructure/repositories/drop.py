@@ -35,6 +35,12 @@ class DropRepository:
     ) -> DropModel | None:
         return await self._session.get(DropModel, drop_id)
 
+    async def get_by_id_for_update(self, drop_id: UUID) -> DropModel | None:
+        result = await self._session.execute(
+            select(DropModel).where(DropModel.id == drop_id).with_for_update()
+        )
+        return result.scalar_one_or_none()
+
     async def get_download_grant(
         self,
         drop_id: UUID,
@@ -212,6 +218,30 @@ class DropRepository:
             DropModel.expires_at <= cutoff,
         )
         result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_stale_uploads(self, cutoff: datetime) -> list[DropModel]:
+        result = await self._session.execute(
+            select(DropModel).where(
+                DropModel.status == DropStatus.UPLOADING,
+                DropModel.created_at <= cutoff,
+            )
+        )
+        return list(result.scalars().all())
+
+    async def get_cleanup_candidates(self) -> list[DropModel]:
+        result = await self._session.execute(
+            select(DropModel).where(
+                DropModel.status.in_(
+                    (
+                        DropStatus.CONSUMED,
+                        DropStatus.EXPIRED,
+                        DropStatus.DELETING,
+                        DropStatus.FAILED,
+                    )
+                )
+            )
+        )
         return list(result.scalars().all())
 
     async def record_download_event(self, event: DownloadEventModel) -> None:

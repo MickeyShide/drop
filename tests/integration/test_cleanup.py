@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from drop.application.services.cleanup import DropCleanupService
 from drop.application.services.drop import DropService
-from drop.infrastructure.database.models import DropModel
+from drop.infrastructure.database.models import DropModel, DropStatus
 from drop.infrastructure.repositories.drop import DropRepository
 from tests.integration.factories import create_active_drop
 
@@ -101,7 +101,7 @@ async def test_consumed_drop_automatically_enqueues_cleanup(
         await service.get_download_stream(public_id, access_token, "session1")
         await service.complete_download_grant(public_id, "session1")
 
-    with patch("drop.workers.tasks.delete_drop_file.delay") as mock_delay:
+    with patch("drop.workers.tasks.delete_drop_file.apply_async") as mock_apply_async:
         async with session_factory() as session:
             from drop.application.services.outbox import OutboxPublisherService
             from drop.infrastructure.repositories.outbox import OutboxRepository
@@ -112,7 +112,8 @@ async def test_consumed_drop_automatically_enqueues_cleanup(
             )
             count = await publisher.publish_pending_events()
             assert count == 1
-            mock_delay.assert_called_once_with(str(drop_id))
+            mock_apply_async.assert_called_once()
+            assert mock_apply_async.call_args.kwargs["args"] == [str(drop_id)]
 
 
 @pytest.mark.asyncio
@@ -161,3 +162,30 @@ async def test_cleanup_expired_drops_finds_and_marks_expired(
             await session.execute(select(DropModel).where(DropModel.id == active_id))
         ).scalar_one()
         assert persisted_active.status.value == "ACTIVE"
+
+
+@pytest.mark.asyncio
+async def test_stale_upload_recovery_activates_complete_object(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    async with session_factory() as session:
+        drop, _ = await create_active_drop(session, max_downloads=1)
+        drop.status = DropStatus.UPLOADING
+        drop.created_at = datetime.now(UTC) - timedelta(hours=2)
+        await session.commit()
+        drop_id = drop.id
+
+    storage = DummyS3Storage()
+    storage.get_object_metadata = lambda _: (100, "text/plain")  # type: ignore[attr-defined]
+    async with session_factory() as session:
+        service = DropCleanupService(
+            session=session,
+            repository=DropRepository(session),
+            storage=storage,  # type: ignore[arg-type]
+        )
+        await service.cleanup_expired_drops()
+
+    async with session_factory() as session:
+        persisted = await session.get(DropModel, drop_id)
+        assert persisted is not None
+        assert persisted.status == DropStatus.ACTIVE

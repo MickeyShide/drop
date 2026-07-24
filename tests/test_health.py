@@ -30,6 +30,7 @@ def test_readiness_success() -> None:
         with (
             patch("drop.api.health.get_redis_client", return_value=mock_redis),
             patch("drop.api.health.S3Storage"),
+            patch("drop.api.health.check_broker_connection"),
         ):
             response = client.get("/health/ready")
             assert response.status_code == 200
@@ -37,6 +38,7 @@ def test_readiness_success() -> None:
             assert data["status"] == "ready"
             assert data["checks"]["postgres"] == "ok"
             assert data["checks"]["redis"] == "ok"
+            assert data["checks"]["rabbitmq"] == "ok"
             assert data["checks"]["minio"] == "ok"
     finally:
         app.dependency_overrides.clear()
@@ -53,6 +55,7 @@ def test_readiness_service_failure() -> None:
         with (
             patch("drop.api.health.get_redis_client"),
             patch("drop.api.health.S3Storage"),
+            patch("drop.api.health.check_broker_connection"),
         ):
             response = client.get("/health/ready")
             assert response.status_code == 503
