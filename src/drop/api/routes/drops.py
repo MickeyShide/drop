@@ -18,6 +18,7 @@ from fastapi.responses import StreamingResponse
 
 from drop.api.dependencies import DropServiceDep
 from drop.api.rate_limit import (
+    get_client_ip,
     rate_limit_create,
     rate_limit_download,
     rate_limit_download_per_drop,
@@ -166,7 +167,7 @@ async def download_drop(
         )
 
     start_time = time.perf_counter()
-    ip_address = request.client.host if request.client else None
+    ip_address = get_client_ip(request)
     user_agent = request.headers.get("user-agent")
     request_id = getattr(request.state, "request_id", "unknown")
 

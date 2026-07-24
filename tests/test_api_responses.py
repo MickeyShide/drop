@@ -1,3 +1,4 @@
+from io import BytesIO
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -102,5 +103,40 @@ def test_logs_dashboard_data_is_public(client: TestClient) -> None:
         assert response.status_code == 200
         assert response.json() == expected_data
         service.get_admin_logs.assert_awaited_once()
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_download_uses_verified_client_ip_for_logging(client: TestClient) -> None:
+    service = AsyncMock()
+    service.get_download_stream.return_value = (
+        BytesIO(b"file"),
+        "file.txt",
+        4,
+        "text/plain",
+    )
+    route_redis = AsyncMock()
+    route_redis.set.return_value = True
+    app.dependency_overrides[get_drop_service] = lambda: service
+
+    try:
+        with (
+            patch(
+                "drop.api.routes.drops.get_client_ip",
+                return_value="203.0.113.195",
+            ),
+            patch(
+                "drop.api.routes.drops.get_redis_client",
+                return_value=route_redis,
+            ),
+        ):
+            response = client.post(
+                "/api/v1/drops/drop-123/download",
+                headers={"X-Drop-Action": "download", "X-Drop-Token": "token"},
+            )
+
+        assert response.status_code == 200
+        assert response.content == b"file"
+        assert service.get_download_stream.await_args.kwargs["ip_address"] == "203.0.113.195"
     finally:
         app.dependency_overrides.clear()
