@@ -44,7 +44,6 @@ def get_existing_postgres_url() -> str | None:
     return os.getenv("TEST_DATABASE_URL")
 
 
-
 @pytest.fixture(scope="session")
 def postgres_container() -> Iterator[Any]:
     existing_url = get_existing_postgres_url()

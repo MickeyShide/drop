@@ -7,7 +7,9 @@ from drop.infrastructure.storage.s3 import S3Storage
 
 def test_s3_storage_lifecycle_with_mock() -> None:
     mock_boto_client = MagicMock()
-    mock_boto_client.generate_presigned_url.return_value = "https://s3.local/presigned-url"
+    mock_boto_client.generate_presigned_url.return_value = (
+        "https://s3.local/presigned-url"
+    )
 
     with patch("boto3.client", return_value=mock_boto_client):
         storage = S3Storage()

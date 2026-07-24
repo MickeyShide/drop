@@ -11,22 +11,50 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    app_name: str = "Drop"
-    app_env: str = "local"
-    debug: bool = False
+    app_name: str
+    app_env: str
+    debug: bool
 
-    database_url: str = "postgresql+asyncpg://drop:drop@localhost:5432/drop"
+    database_url: str
 
-    rabbitmq_url: str = "amqp://drop:drop@localhost:5672/"
-    redis_url: str = "redis://localhost:6379/0"
+    rabbitmq_url: str
+    redis_url: str
 
-    s3_endpoint: str = "http://localhost:9000"
-    s3_access_key: str = "drop"
-    s3_secret_key: str = "dropdropdrop"
-    s3_bucket: str = "drops"
-    s3_region: str = "us-east-1"
+    s3_endpoint: str
+    s3_access_key: str
+    s3_secret_key: str
+    s3_bucket: str
+    s3_region: str
 
-    max_upload_size_bytes: int = 100 * 1024 * 1024
+    max_upload_size_bytes: int
+
+    drop_token_pepper: str
+    session_pepper: str
+
+    rate_limit_create_max: int
+    rate_limit_create_window: int
+
+    rate_limit_metadata_max: int
+    rate_limit_metadata_window: int
+
+    rate_limit_download_max: int
+    rate_limit_download_window: int
+
+    rate_limit_invalid_token_max: int
+    rate_limit_invalid_token_window: int
+    rate_limit_invalid_token_ban_seconds: int
+
+    rate_limit_upload_max: int
+    rate_limit_upload_window: int
+    rate_limit_upload_bytes: int
+    rate_limit_upload_bytes_window: int
+    rate_limit_download_per_drop_max: int
+    rate_limit_download_per_drop_window: int
+    rate_limit_download_per_session_max: int
+    rate_limit_download_per_session_window: int
+    download_stream_lock_seconds: int
+    trusted_proxy_ips: str
+    session_cookie_secure: bool
 
     @field_validator("debug", mode="before")
     @classmethod

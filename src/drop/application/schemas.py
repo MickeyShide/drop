@@ -15,6 +15,11 @@ class DropResponse(BaseModel):
     created_at: datetime
 
 
+class CreateDropResponse(DropResponse):
+    access_token: str
+    share_url: str
+
+
 class DownloadResponse(BaseModel):
     url: str
     expires_in: int
@@ -29,4 +34,3 @@ class ErrorDetail(BaseModel):
 class ErrorResponse(BaseModel):
     error: ErrorDetail
     request_id: str
-

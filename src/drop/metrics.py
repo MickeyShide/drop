@@ -32,6 +32,31 @@ DROP_DOWNLOADS_REJECTED_TOTAL = Counter(
     ["reason"],  # not_found, expired, consumed, not_ready
 )
 
+INVALID_CAPABILITY_TOTAL = Counter(
+    "invalid_capability_total",
+    "Invalid capability token attempts",
+)
+
+RATE_LIMITED_REQUESTS_TOTAL = Counter(
+    "rate_limited_requests_total",
+    "Requests rejected by a rate limiter",
+)
+
+DOWNLOAD_GRANTS_CREATED_TOTAL = Counter(
+    "download_grants_created_total",
+    "Unique recipient download grants created",
+)
+
+DOWNLOAD_GRANTS_REUSED_TOTAL = Counter(
+    "download_grants_reused_total",
+    "Existing recipient grants reused",
+)
+
+CONCURRENT_DOWNLOAD_REJECTED_TOTAL = Counter(
+    "concurrent_download_rejected_total",
+    "Downloads rejected because a stream is already active",
+)
+
 # Celery Worker & Cleanup Metrics
 CELERY_TASK_FAILURES_TOTAL = Counter(
     "celery_task_failures_total",

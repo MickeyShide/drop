@@ -2,4 +2,6 @@ import secrets
 
 
 def generate_public_id() -> str:
-    return secrets.token_urlsafe(12)
+    # The public ID is only a locator, but 128 bits also make accidental
+    # enumeration impractical before capability verification is attempted.
+    return secrets.token_urlsafe(16)

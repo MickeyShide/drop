@@ -2,7 +2,7 @@ from fastapi import FastAPI
 
 from drop.api.errors import register_exception_handlers
 from drop.api.health import router as health_router
-from drop.api.middleware import RequestIDMiddleware
+from drop.api.middleware import RequestIDMiddleware, SecurityHeadersMiddleware
 from drop.api.routes.drops import router as drops_router
 from drop.api.routes.metrics import router as metrics_router
 from drop.config import get_settings
@@ -18,10 +18,11 @@ def create_app() -> FastAPI:
         description="Ephemeral secure file sharing microservice with atomic limits and automatic cleanup.",
         version="0.1.0",
         debug=settings.debug,
-        docs_url="/docs",
-        redoc_url="/redoc",
+        docs_url=None if settings.app_env == "production" else "/docs",
+        redoc_url=None if settings.app_env == "production" else "/redoc",
     )
 
+    app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestIDMiddleware)
     register_exception_handlers(app)
 

@@ -23,7 +23,11 @@ class OutboxPublisherService:
         processed_ids = []
 
         for event in events:
-            if event.event_type in ("DROP_CLEANUP_REQUIRED", "DROP_CLEANUP_REQUESTED", "DROP_EXPIRED"):
+            if event.event_type in (
+                "DROP_CLEANUP_REQUIRED",
+                "DROP_CLEANUP_REQUESTED",
+                "DROP_EXPIRED",
+            ):
                 drop_id = event.payload.get("drop_id")
                 if drop_id:
                     delete_drop_file.delay(str(drop_id))

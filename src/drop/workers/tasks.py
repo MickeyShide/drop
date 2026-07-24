@@ -95,7 +95,9 @@ async def _cleanup_expired_drops() -> int:
 
         expired_ids = await service.cleanup_expired_drops()
         if expired_ids:
-            logger.info("Expired drops cleanup processed", extra={"count": len(expired_ids)})
+            logger.info(
+                "Expired drops cleanup processed", extra={"count": len(expired_ids)}
+            )
         return len(expired_ids)
 
 
@@ -128,5 +130,8 @@ async def _publish_outbox_events() -> int:
 
         processed = await service.publish_pending_events()
         if processed > 0:
-            logger.info("Outbox publisher processed pending events", extra={"processed_count": processed})
+            logger.info(
+                "Outbox publisher processed pending events",
+                extra={"processed_count": processed},
+            )
         return processed

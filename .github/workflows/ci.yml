@@ -36,6 +36,9 @@ jobs:
 
       - name: 3. Pytest (Unit & Integration Tests)
         env:
+          APP_NAME: Drop
+          APP_ENV: test
+          DEBUG: false
           DATABASE_URL: postgresql+asyncpg://drop:drop@localhost:5432/drop_test
           RABBITMQ_URL: amqp://drop:drop@localhost:5672/
           REDIS_URL: redis://localhost:6379/0
@@ -43,6 +46,30 @@ jobs:
           S3_ACCESS_KEY: drop
           S3_SECRET_KEY: dropdropdrop
           S3_BUCKET: drop-test
+          S3_REGION: us-east-1
+          MAX_UPLOAD_SIZE_BYTES: 104857600
+          DROP_TOKEN_PEPPER: ci-only-drop-token-pepper
+          SESSION_PEPPER: ci-only-session-pepper
+          TRUSTED_PROXY_IPS: ""
+          SESSION_COOKIE_SECURE: false
+          RATE_LIMIT_CREATE_MAX: 10
+          RATE_LIMIT_CREATE_WINDOW: 60
+          RATE_LIMIT_METADATA_MAX: 60
+          RATE_LIMIT_METADATA_WINDOW: 60
+          RATE_LIMIT_DOWNLOAD_MAX: 10
+          RATE_LIMIT_DOWNLOAD_WINDOW: 60
+          RATE_LIMIT_INVALID_TOKEN_MAX: 10
+          RATE_LIMIT_INVALID_TOKEN_WINDOW: 60
+          RATE_LIMIT_INVALID_TOKEN_BAN_SECONDS: 600
+          RATE_LIMIT_UPLOAD_MAX: 5
+          RATE_LIMIT_UPLOAD_WINDOW: 60
+          RATE_LIMIT_UPLOAD_BYTES: 524288000
+          RATE_LIMIT_UPLOAD_BYTES_WINDOW: 3600
+          RATE_LIMIT_DOWNLOAD_PER_DROP_MAX: 5
+          RATE_LIMIT_DOWNLOAD_PER_DROP_WINDOW: 60
+          RATE_LIMIT_DOWNLOAD_PER_SESSION_MAX: 10
+          RATE_LIMIT_DOWNLOAD_PER_SESSION_WINDOW: 60
+          DOWNLOAD_STREAM_LOCK_SECONDS: 300
         run: uv run pytest -v
 
       - name: 4. Set up Docker Buildx
@@ -61,26 +88,48 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Validate deployment configuration
+        env:
+          SERVER_HOST: ${{ vars.SERVER_HOST }}
+          SERVER_USER: ${{ vars.SERVER_USER }}
+          SERVER_PORT: ${{ vars.SERVER_PORT }}
+          TARGET_DIR: ${{ vars.TARGET_DIR }}
+          NGINX_PORT: ${{ vars.NGINX_PORT }}
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          DROP_TOKEN_PEPPER: ${{ secrets.DROP_TOKEN_PEPPER }}
+          SESSION_PEPPER: ${{ secrets.SESSION_PEPPER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
+          MINIO_PASSWORD: ${{ secrets.MINIO_PASSWORD }}
+        run: |
+          set -eu
+          for name in SERVER_HOST SERVER_USER SERVER_PORT TARGET_DIR NGINX_PORT SERVER_SSH_KEY DROP_TOKEN_PEPPER SESSION_PEPPER POSTGRES_PASSWORD RABBITMQ_PASSWORD MINIO_PASSWORD; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Required GitHub variable or secret is missing: $name"
+              exit 1
+            fi
+          done
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          NGINX_PORT: ${{ vars.NGINX_PORT }}
+          DROP_TOKEN_PEPPER: ${{ secrets.DROP_TOKEN_PEPPER }}
+          SESSION_PEPPER: ${{ secrets.SESSION_PEPPER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
+          MINIO_PASSWORD: ${{ secrets.MINIO_PASSWORD }}
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER || 'root' }}
+          host: ${{ vars.SERVER_HOST }}
+          username: ${{ vars.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          port: ${{ secrets.SERVER_PORT || 22 }}
+          port: ${{ vars.SERVER_PORT }}
+          envs: NGINX_PORT,DROP_TOKEN_PEPPER,SESSION_PEPPER,POSTGRES_PASSWORD,RABBITMQ_PASSWORD,MINIO_PASSWORD
           script: |
             set -e
-            TARGET_DIR="${{ secrets.TARGET_DIR }}"
-            if [ -z "$TARGET_DIR" ]; then
-              TARGET_DIR="$HOME/drop"
-            fi
-            
+            TARGET_DIR="${{ vars.TARGET_DIR }}"
             echo "1. Navigating to project directory: $TARGET_DIR"
-            if ! mkdir -p "$TARGET_DIR" 2>/dev/null; then
-              echo "Warning: Permission denied for $TARGET_DIR, falling back to $HOME/drop"
-              TARGET_DIR="$HOME/drop"
-              mkdir -p "$TARGET_DIR"
-            fi
+            mkdir -p "$TARGET_DIR"
             cd "$TARGET_DIR"
 
             echo "2. Pulling latest changes..."
@@ -90,6 +139,16 @@ jobs:
               git fetch --all
               git reset --hard origin/${{ github.ref_name }}
             fi
+
+            umask 077
+            cat > .env <<EOF
+            NGINX_PORT=$NGINX_PORT
+            DROP_TOKEN_PEPPER=$DROP_TOKEN_PEPPER
+            SESSION_PEPPER=$SESSION_PEPPER
+            POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+            RABBITMQ_PASSWORD=$RABBITMQ_PASSWORD
+            MINIO_PASSWORD=$MINIO_PASSWORD
+            EOF
 
             echo "3. Rebuilding Docker Compose containers..."
             docker compose up -d --build --remove-orphans

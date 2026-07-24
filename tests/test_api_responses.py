@@ -9,11 +9,12 @@ from drop.main import app
 
 @pytest.fixture
 def client():
-    with patch("drop.api.rate_limit.get_redis_client") as mock_redis, \
-         patch("drop.api.dependencies.S3Storage"):
+    with (
+        patch("drop.api.rate_limit.get_redis_client") as mock_redis,
+        patch("drop.api.dependencies.S3Storage"),
+    ):
         mock_instance = AsyncMock()
-        mock_instance.incr.return_value = 1
-        mock_instance.expire.return_value = True
+        mock_instance.eval.return_value = [1, 60]
         mock_redis.return_value = mock_instance
 
         async def override_get_session():
@@ -55,7 +56,7 @@ def test_unified_error_response_format_404(client: TestClient) -> None:
     try:
         response = client.get(
             "/api/v1/drops/non-existent-id",
-            headers={"X-Request-ID": custom_id},
+            headers={"X-Request-ID": custom_id, "X-Drop-Token": "dummy_token"},
         )
 
         assert response.status_code == 404

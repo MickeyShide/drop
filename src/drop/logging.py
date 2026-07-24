@@ -16,6 +16,12 @@ SENSITIVE_KEYS = {
     "access_key",
     "authorization",
     "token",
+    "access_token",
+    "x_drop_token",
+    "x-drop-token",
+    "drop_token",
+    "drop_sid",
+    "cookie",
     "s3_secret_key",
     "s3_access_key",
 }
@@ -53,10 +59,27 @@ class JSONFormatter(logging.Formatter):
 
         # Include extra fields passed to logger.info(..., extra={...})
         standard_attrs = {
-            "name", "msg", "args", "levelname", "levelno", "pathname", "filename",
-            "module", "exc_info", "exc_text", "stack_info", "lineno", "funcName",
-            "created", "msecs", "relativeCreated", "thread", "threadName",
-            "processName", "process", "taskName",
+            "name",
+            "msg",
+            "args",
+            "levelname",
+            "levelno",
+            "pathname",
+            "filename",
+            "module",
+            "exc_info",
+            "exc_text",
+            "stack_info",
+            "lineno",
+            "funcName",
+            "created",
+            "msecs",
+            "relativeCreated",
+            "thread",
+            "threadName",
+            "processName",
+            "process",
+            "taskName",
         }
 
         for key, value in record.__dict__.items():
@@ -81,7 +104,13 @@ def setup_logging(level: int = logging.INFO) -> None:
     root_logger.addHandler(handler)
 
     # Align uvicorn and celery loggers
-    for logger_name in ("uvicorn", "uvicorn.access", "uvicorn.error", "celery", "celery.task"):
+    for logger_name in (
+        "uvicorn",
+        "uvicorn.access",
+        "uvicorn.error",
+        "celery",
+        "celery.task",
+    ):
         lg = logging.getLogger(logger_name)
         lg.handlers.clear()
         lg.addHandler(handler)

@@ -13,18 +13,24 @@ from drop.workers.tasks import (
 from tests.integration.factories import create_active_drop
 
 
+from drop.config import get_settings
+from drop.domain.security import compute_token_hash
+
+
 @pytest.mark.asyncio
 async def test_delete_drop_file_task_execution_and_idempotency(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        drop = await create_active_drop(session, max_downloads=1)
+        drop, _ = await create_active_drop(session, max_downloads=1)
         drop.status = DropStatus.CONSUMED
         await session.commit()
         drop_id = drop.id
 
-    with patch("drop.workers.tasks.S3Storage") as mock_s3_cls, \
-         patch("drop.workers.tasks.SessionFactory", session_factory):
+    with (
+        patch("drop.workers.tasks.S3Storage") as mock_s3_cls,
+        patch("drop.workers.tasks.SessionFactory", session_factory),
+    ):
         mock_storage = mock_s3_cls.return_value
         mock_storage.delete = AsyncMock()
 
@@ -56,6 +62,9 @@ async def test_cleanup_expired_drops_task(
     async with session_factory() as session:
         expired_drop = DropModel(
             public_id="expired-task-test",
+            access_token_hash=compute_token_hash(
+                "token", get_settings().drop_token_pepper
+            ),
             original_filename="expired.txt",
             storage_key="drops/expired/source",
             content_type="text/plain",
@@ -70,8 +79,10 @@ async def test_cleanup_expired_drops_task(
         await session.commit()
         drop_id = expired_drop.id
 
-    with patch("drop.workers.tasks.SessionFactory", session_factory), \
-         patch("drop.workers.tasks.S3Storage"):
+    with (
+        patch("drop.workers.tasks.SessionFactory", session_factory),
+        patch("drop.workers.tasks.S3Storage"),
+    ):
         count = await _cleanup_expired_drops()
         assert count >= 1
 
@@ -85,8 +96,10 @@ async def test_cleanup_expired_drops_task(
 async def test_publish_outbox_events_task(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    with patch("drop.workers.tasks.delete_drop_file.delay") as mock_delay, \
-         patch("drop.workers.tasks.SessionFactory", session_factory):
+    with (
+        patch("drop.workers.tasks.delete_drop_file.delay") as mock_delay,
+        patch("drop.workers.tasks.SessionFactory", session_factory),
+    ):
         mock_delay.return_value = None
         processed = await _publish_outbox_events()
         assert isinstance(processed, int)

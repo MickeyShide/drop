@@ -1,124 +1,115 @@
-# Drop — Ephemeral File Sharing Microservice
+# Drop — anonymous ephemeral file sharing
 
-**Drop** is a minimalistic, secure, ephemeral file-sharing backend built with Python, FastAPI, PostgreSQL, Redis, RabbitMQ, Celery, and S3-compatible Object Storage (MinIO).
+Drop is an anonymous file-sharing service built with FastAPI, PostgreSQL,
+Redis, Celery/RabbitMQ, MinIO and Nginx.
 
-> **Core Philosophy**: Upload a file. Share the link. The file disappears automatically.
+## Security model
 
----
-
-## Architecture Overview
+Access is capability-based: a Drop has a public locator and a separate,
+256-bit random access token. The token is returned only when the Drop is
+created and is placed in the share-link fragment:
 
 ```text
-                        ┌───────────┐
-                        │  Client   │
-                        └─────┬─────┘
-                              │
-                              ▼
-                        ┌───────────┐
-                        │   Nginx   │ (Reverse Proxy, Security Headers, Upload Limits)
-                        └─────┬─────┘
-                              │
-                              ▼
-                        ┌───────────┐
-                        │ FastAPI   │
-                        │ Drop API  │ (Stream handling, Rate Limiting, Atomic Updates)
-                        └─────┬─────┘
-                              │
-             ┌────────────────┼────────────────┐
-             │                │                │
-             ▼                ▼                ▼
-       ┌──────────┐      ┌────────┐       ┌─────────┐
-       │PostgreSQL│      │ Redis  │       │  MinIO  │
-       │ (State)  │      │(Limiter│       │  (S3)   │
-       └──────────┘      └────────┘       └─────────┘
-             │
-             ▼ (Transactional Outbox)
-       ┌──────────┐
-       │ RabbitMQ │
-       └─────┬────┘
-             │
-             ▼
-       ┌──────────┐
-       │  Celery  │ (Idempotent S3 Cleanup & Expiration Sweeps)
-       │ Workers  │
-       └──────────┘
+https://host/d/{public_id}#{access_token}
 ```
 
----
+The browser keeps the fragment client-side and sends the token in
+`X-Drop-Token`. The database stores only an HMAC-SHA256 token digest. Do not
+put capability tokens in query strings, logs, localStorage or referrers.
 
-## Key Business Invariants & Guarantees
+`DROP_TOKEN_PEPPER` and `SESSION_PEPPER` must be supplied through environment
+secrets in production.
 
-1. **Strict Download Limit (`download_count <= max_downloads`)**:
-   - Atomic PostgreSQL `UPDATE` query guarantees that concurrent download requests (e.g. 100 simultaneous clients) can NEVER exceed the allowed download limit.
+## API contract
 
-2. **API-Enforced Immediate Expiration**:
-   - Drops with `NOW() >= expires_at` are immediately rejected by the API with `HTTP 410 Gone`, regardless of whether the Celery cleanup worker has run.
+- `POST /api/v1/drops` creates a Drop and returns `access_token` and
+  `share_url` once.
+- `GET /api/v1/drops/{public_id}` returns metadata only and requires
+  `X-Drop-Token`.
+- `POST /api/v1/drops/{public_id}/download` performs the intentional download.
+  It requires `X-Drop-Token`, `X-Drop-Action: download`, and an
+  `Idempotency-Key` is recommended.
 
-3. **PostgreSQL as Source of Truth**:
-   - Redis is used strictly for volatile IP rate limiting counters. All business state and concurrency bounds reside in PostgreSQL.
+GET never consumes a slot, creates a grant or starts cleanup. Download POSTs
+use an anonymous `drop_sid` cookie. One session can create at most one
+`download_grant` for a Drop, so retries and repeated clicks do not consume
+additional slots. `max_downloads` counts unique recipient grants, not raw HTTP
+requests.
 
-4. **Transactional Outbox Pattern**:
-   - File deletion events are written to the `outbox_events` PostgreSQL table within the exact same database transaction as status updates, eliminating dual-write failure windows.
+PostgreSQL is the source of truth for grants and counters. Redis provides
+atomic rate limits and a short-lived per-session stream lock; Redis failure
+fails closed on security-sensitive operations.
 
-5. **Idempotent Background Workers**:
-   - Celery worker tasks (`delete_drop_file`, `cleanup_expired_drops`) are idempotent. Deleting an already removed S3 object succeeds gracefully and preserves the initial `deleted_at` timestamp.
+## Local launch
 
----
-
-## Dedicated Host Port Range (`4910 - 4917`)
-
-To avoid collisions with other projects on shared servers, Drop uses a dedicated host port range:
-
-- **API Service**: `http://localhost:4910` (Swagger Docs: `http://localhost:4910/docs`)
-- **Nginx Entrypoint**: `http://localhost:4917`
-- **PostgreSQL**: `localhost:4911`
-- **Redis**: `localhost:4912`
-- **MinIO S3 API**: `http://localhost:4913`
-- **MinIO Console**: `http://localhost:4914` (User: `drop`, Password: `dropdropdrop`)
-- **RabbitMQ AMQP**: `localhost:4915`
-- **RabbitMQ Management**: `http://localhost:4916` (User: `drop`, Password: `dropdropdrop`)
-
----
-
-## Quick Start (Docker Compose)
-
-Start the entire architecture with a single command:
+The local stack has all development values embedded in a separate Compose file;
+no `.env` file or shell variables are required:
 
 ```powershell
-docker compose up -d --build
+docker compose -f docker-compose.local.yml up -d --build
+# or: make up-local
 ```
 
----
+The application is available at `http://localhost:4917`. Stop it with:
 
-## Running Tests & Demonstrations
+```powershell
+docker compose -f docker-compose.local.yml down
+```
 
-### 1. Run Automated Test Suite
+Local peppers and passwords are development-only values and must not be reused
+in production.
+
+## Production deployment
+
+Only Nginx is published by the production Compose file. PostgreSQL, Redis,
+RabbitMQ, MinIO and the FastAPI port remain on the internal Docker network.
+Production deployment is performed by GitHub Actions. Before SSH deployment,
+the workflow validates every required GitHub Variable and Secret and fails if
+even one is empty. It then writes a protected `.env` on the target host and
+starts Compose. There are no GitHub fallbacks or default deployment values.
+
+Required GitHub Variables:
+
+- `SERVER_HOST`
+- `SERVER_USER`
+- `SERVER_PORT`
+- `TARGET_DIR`
+- `NGINX_PORT`
+
+Required GitHub Secrets:
+
+- `SERVER_SSH_KEY`
+- `DROP_TOKEN_PEPPER`
+- `SESSION_PEPPER`
+- `POSTGRES_PASSWORD`
+- `RABBITMQ_PASSWORD`
+- `MINIO_PASSWORD`
+
+Use URL-safe passwords containing only letters, digits, `-` or `_`. The
+Compose file derives the PostgreSQL, RabbitMQ and S3 application credentials
+from these three passwords, so duplicate URL and access-key variables are not
+needed.
+
+Use a real secret manager for production rather than shell history. MinIO
+must remain private and should not be exposed directly to the Internet.
+
+## Development and verification
 
 ```powershell
 uv run pytest -v
+uv run ruff format --check .
+uv run ruff check .
+uv run mypy src
 ```
 
-### 2. Concurrency Race Condition Demonstration (`make race-test`)
+The integration suite covers capability verification, generic enumeration
+errors, GET safety, same-session spam, different-session concurrency,
+idempotent cleanup, rate-limit failure policy and security headers.
 
-Creates a 1-download limit drop and fires 100 concurrent HTTP requests:
+## Anonymous-service limitation
 
-```powershell
-make race-test
-```
-
-### 3. Expiration Lifecycle Demonstration (`make expiration-test`)
-
-Creates a 5-second TTL drop, verifies HTTP 200 before expiration, waits 6 seconds, and verifies HTTP 410 Gone:
-
-```powershell
-make expiration-test
-```
-
----
-
-## Code Quality
-
-```powershell
-make lint       # Runs ruff check .
-make typecheck  # Runs mypy src
-```
+Without user authentication, the service cannot prove that different
+cookies, IPs or proxy networks belong to the same physical person. The
+security promise is therefore an unguessable capability link plus layered
+anti-abuse controls, not absolute prevention against an attacker who already
+possesses the complete link and can create new identities.

@@ -18,6 +18,10 @@ from drop.infrastructure.repositories.drop import DropRepository
 from drop.infrastructure.storage.s3 import S3Storage
 
 
+from drop.config import get_settings
+from drop.domain.security import compute_token_hash
+
+
 @pytest.mark.asyncio
 async def test_drop_service_rejects_expired_drop_immediately(
     session_factory: async_sessionmaker[AsyncSession],
@@ -26,6 +30,9 @@ async def test_drop_service_rejects_expired_drop_immediately(
     async with session_factory() as session:
         expired_drop = DropModel(
             public_id="expired-api-test",
+            access_token_hash=compute_token_hash(
+                "token", get_settings().drop_token_pepper
+            ),
             original_filename="expired.txt",
             storage_key="drops/expired/source",
             content_type="text/plain",
@@ -47,7 +54,7 @@ async def test_drop_service_rejects_expired_drop_immediately(
         )
 
         with pytest.raises(DropExpiredError):
-            await service.consume_download("expired-api-test")
+            await service.get_metadata("expired-api-test", "token")
 
 
 @pytest.mark.asyncio
@@ -58,6 +65,9 @@ async def test_cleanup_expired_drops_creates_outbox_event(
     async with session_factory() as session:
         expired_drop = DropModel(
             public_id="expired-outbox-test",
+            access_token_hash=compute_token_hash(
+                "token", get_settings().drop_token_pepper
+            ),
             original_filename="expired.txt",
             storage_key="drops/expired/source",
             content_type="text/plain",
@@ -94,5 +104,7 @@ async def test_cleanup_expired_drops_creates_outbox_event(
             )
         )
         outbox_events = result.scalars().all()
-        matching = [e for e in outbox_events if e.payload.get("drop_id") == str(drop_id)]
+        matching = [
+            e for e in outbox_events if e.payload.get("drop_id") == str(drop_id)
+        ]
         assert len(matching) == 1

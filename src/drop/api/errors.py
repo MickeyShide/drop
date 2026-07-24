@@ -102,12 +102,14 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def rate_limit_exceeded(
         request: Request, exc: RateLimitExceededError
     ) -> JSONResponse:
-        return _build_error_response(
+        response = _build_error_response(
             status_code=429,
             code="TOO_MANY_REQUESTS",
             message="Rate limit exceeded. Please try again later.",
             request=request,
         )
+        response.headers["Retry-After"] = str(exc.retry_after)
+        return response
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(

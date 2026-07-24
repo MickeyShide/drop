@@ -2,7 +2,18 @@ import enum
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import BigInteger, DateTime, Enum, Float, Integer, JSON, String
+from sqlalchemy import (
+    BigInteger,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    JSON,
+    LargeBinary,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -26,6 +37,12 @@ class OutboxStatus(str, enum.Enum):
     FAILED = "FAILED"
 
 
+class GrantStatus(str, enum.Enum):
+    ACTIVE = "ACTIVE"
+    COMPLETED = "COMPLETED"
+    EXPIRED = "EXPIRED"
+
+
 class DropModel(Base):
     __tablename__ = "drops"
 
@@ -40,6 +57,11 @@ class DropModel(Base):
         unique=True,
         nullable=False,
         index=True,
+    )
+
+    access_token_hash: Mapped[bytes] = mapped_column(
+        LargeBinary,
+        nullable=False,
     )
 
     original_filename: Mapped[str] = mapped_column(
@@ -96,6 +118,55 @@ class DropModel(Base):
     )
 
     deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+
+class DownloadGrantModel(Base):
+    __tablename__ = "download_grants"
+    __table_args__ = (
+        UniqueConstraint(
+            "drop_id", "client_session_hash", name="uq_drop_client_session"
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+
+    drop_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("drops.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    client_session_hash: Mapped[bytes] = mapped_column(
+        LargeBinary,
+        nullable=False,
+    )
+
+    status: Mapped[GrantStatus] = mapped_column(
+        Enum(GrantStatus, name="grant_status"),
+        nullable=False,
+        default=GrantStatus.ACTIVE,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+    )
+
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
     )

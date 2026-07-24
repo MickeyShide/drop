@@ -18,7 +18,7 @@ async def test_single_download_limit_is_atomic(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        drop = await create_active_drop(
+        drop, _ = await create_active_drop(
             session,
             max_downloads=1,
         )
@@ -65,7 +65,7 @@ async def test_multiple_download_limit_is_atomic(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        drop = await create_active_drop(
+        drop, _ = await create_active_drop(
             session,
             max_downloads=5,
         )
@@ -111,7 +111,7 @@ async def test_unlimited_drop_accepts_concurrent_downloads(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        drop = await create_active_drop(
+        drop, _ = await create_active_drop(
             session,
             max_downloads=None,
         )
@@ -154,7 +154,7 @@ async def test_expired_drop_cannot_be_consumed(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        drop = await create_active_drop(
+        drop, _ = await create_active_drop(
             session,
             max_downloads=1,
             expires_at=datetime.now(UTC) - timedelta(seconds=1),

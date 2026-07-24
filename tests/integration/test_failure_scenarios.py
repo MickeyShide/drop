@@ -48,7 +48,7 @@ async def test_s3_delete_error_during_cleanup_raises_exception_for_retry(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        drop = await create_active_drop(session, max_downloads=1)
+        drop, _ = await create_active_drop(session, max_downloads=1)
         drop.status = DropStatus.CONSUMED
         await session.commit()
         drop_id = drop.id

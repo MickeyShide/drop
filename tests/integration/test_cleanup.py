@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -7,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from drop.application.services.cleanup import DropCleanupService
 from drop.application.services.drop import DropService
-from drop.infrastructure.database.models import DropModel, DropStatus
+from drop.infrastructure.database.models import DropModel
 from drop.infrastructure.repositories.drop import DropRepository
 from tests.integration.factories import create_active_drop
 
@@ -22,13 +23,19 @@ class DummyS3Storage:
     def create_download_url(self, storage_key: str, expires_in: int = 60) -> str:
         return f"http://localhost:9000/drop/{storage_key}?expires={expires_in}"
 
+    def get_object(self, storage_key: str) -> tuple[Any, int, str | None]:
+        import io
+
+        data = b"dummy file content"
+        return io.BytesIO(data), len(data), "text/plain"
+
 
 @pytest.mark.asyncio
 async def test_cleanup_service_is_idempotent(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        drop = await create_active_drop(session, max_downloads=1)
+        drop, _ = await create_active_drop(session, max_downloads=1)
         drop_id = drop.id
 
     dummy_storage = DummyS3Storage()
@@ -77,7 +84,7 @@ async def test_consumed_drop_automatically_enqueues_cleanup(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        drop = await create_active_drop(session, max_downloads=1)
+        drop, access_token = await create_active_drop(session, max_downloads=1)
         public_id = drop.public_id
         drop_id = drop.id
 
@@ -91,8 +98,8 @@ async def test_consumed_drop_automatically_enqueues_cleanup(
             storage=dummy_storage,  # type: ignore[arg-type]
         )
 
-        consumed_drop = await service.consume_download(public_id)
-        assert consumed_drop.status == DropStatus.CONSUMED
+        await service.get_download_stream(public_id, access_token, "session1")
+        await service.complete_download_grant(public_id, "session1")
 
     with patch("drop.workers.tasks.delete_drop_file.delay") as mock_delay:
         async with session_factory() as session:
@@ -115,14 +122,14 @@ async def test_cleanup_expired_drops_finds_and_marks_expired(
     past_time = datetime.now(UTC) - timedelta(minutes=10)
 
     async with session_factory() as session:
-        expired_drop = await create_active_drop(
+        expired_drop, _ = await create_active_drop(
             session,
             max_downloads=10,
             expires_at=past_time,
         )
         expired_id = expired_drop.id
 
-        active_drop = await create_active_drop(
+        active_drop, _ = await create_active_drop(
             session,
             max_downloads=10,
             expires_at=datetime.now(UTC) + timedelta(hours=1),

@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from starlette.concurrency import run_in_threadpool
 
 from drop.infrastructure.database.models import (
@@ -33,6 +34,9 @@ class DropCleanupService:
         if drop.status == DropStatus.DELETED:
             return
 
+        if await self._repository.count_active_grants(drop_id) > 0:
+            return
+
         await run_in_threadpool(
             self._storage.delete,
             drop.storage_key,
@@ -47,23 +51,43 @@ class DropCleanupService:
         self,
         now: datetime | None = None,
     ) -> list[UUID]:
-        expired_drops = await self._repository.get_expired_drops(now)
-
-        if not expired_drops:
-            return []
+        cutoff = now or datetime.now(UTC)
+        expired_drops = await self._repository.get_expired_drops(cutoff)
+        stale_grant_drop_ids = await self._repository.expire_stale_grants(cutoff)
 
         expired_ids: list[UUID] = []
 
         for drop in expired_drops:
             drop.status = DropStatus.EXPIRED
             expired_ids.append(drop.id)
-            outbox_event = OutboxEventModel(
-                event_type="DROP_CLEANUP_REQUIRED",
-                payload={"drop_id": str(drop.id)},
-                status=OutboxStatus.PENDING,
+
+        candidate_ids = {drop.id for drop in expired_drops}
+        candidate_ids.update(stale_grant_drop_ids)
+        for drop_id in candidate_ids:
+            candidate_drop = await self._repository.get_by_id(drop_id)
+            if candidate_drop is None or candidate_drop.status not in (
+                DropStatus.EXPIRED,
+                DropStatus.CONSUMED,
+            ):
+                continue
+            if await self._repository.count_active_grants(drop_id, cutoff) > 0:
+                continue
+            existing_event = await self._session.execute(
+                select(OutboxEventModel).where(
+                    OutboxEventModel.event_type == "DROP_CLEANUP_REQUIRED",
+                    OutboxEventModel.payload["drop_id"].as_string() == str(drop_id),
+                )
             )
-            self._session.add(outbox_event)
+            if existing_event.scalar_one_or_none() is None:
+                self._session.add(
+                    OutboxEventModel(
+                        event_type="DROP_CLEANUP_REQUIRED",
+                        payload={"drop_id": str(drop_id)},
+                        status=OutboxStatus.PENDING,
+                    )
+                )
 
-        await self._session.commit()
+        if expired_drops or stale_grant_drop_ids:
+            await self._session.commit()
 
-        return expired_ids
+        return expired_ids

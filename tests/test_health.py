@@ -27,8 +27,10 @@ def test_readiness_success() -> None:
 
     app.dependency_overrides[get_session] = override_get_session
     try:
-        with patch("drop.api.health.get_redis_client", return_value=mock_redis), \
-             patch("drop.api.health.S3Storage"):
+        with (
+            patch("drop.api.health.get_redis_client", return_value=mock_redis),
+            patch("drop.api.health.S3Storage"),
+        ):
             response = client.get("/health/ready")
             assert response.status_code == 200
             data = response.json()
@@ -39,6 +41,7 @@ def test_readiness_success() -> None:
     finally:
         app.dependency_overrides.clear()
 
+
 def test_readiness_service_failure() -> None:
     async def override_get_session_fail():
         mock_session = AsyncMock()
@@ -47,8 +50,10 @@ def test_readiness_service_failure() -> None:
 
     app.dependency_overrides[get_session] = override_get_session_fail
     try:
-        with patch("drop.api.health.get_redis_client"), \
-             patch("drop.api.health.S3Storage"):
+        with (
+            patch("drop.api.health.get_redis_client"),
+            patch("drop.api.health.S3Storage"),
+        ):
             response = client.get("/health/ready")
             assert response.status_code == 503
             data = response.json()

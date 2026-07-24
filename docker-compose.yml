@@ -2,7 +2,7 @@ services:
   nginx:
     image: nginx:alpine
     ports:
-      - "${NGINX_PORT:-4917}:80"
+      - "${NGINX_PORT:?NGINX_PORT must be set}:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./frontend:/usr/share/nginx/html:ro
@@ -15,21 +15,41 @@ services:
       context: .
       dockerfile: Dockerfile
     command: api
-    ports:
-      - "${API_PORT:-4910}:8000"
     environment:
       - APP_NAME=Drop
       - APP_ENV=production
       - DEBUG=false
-      - DATABASE_URL=postgresql+asyncpg://drop:drop@postgres:5432/drop
-      - RABBITMQ_URL=amqp://drop:dropdropdrop@rabbitmq:5672//
+      - DATABASE_URL=postgresql+asyncpg://drop:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/drop
+      - RABBITMQ_URL=amqp://drop:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set}@rabbitmq:5672//
       - REDIS_URL=redis://redis:6379/0
       - S3_ENDPOINT=http://minio:9000
       - S3_ACCESS_KEY=drop
-      - S3_SECRET_KEY=dropdropdrop
+      - S3_SECRET_KEY=${MINIO_PASSWORD:?MINIO_PASSWORD must be set}
       - S3_BUCKET=drop
       - S3_REGION=us-east-1
       - MAX_UPLOAD_SIZE_BYTES=104857600
+      - DROP_TOKEN_PEPPER=${DROP_TOKEN_PEPPER:?DROP_TOKEN_PEPPER must be set}
+      - SESSION_PEPPER=${SESSION_PEPPER:?SESSION_PEPPER must be set}
+      - TRUSTED_PROXY_IPS=172.16.0.0/12
+      - SESSION_COOKIE_SECURE=true
+      - RATE_LIMIT_CREATE_MAX=10
+      - RATE_LIMIT_CREATE_WINDOW=60
+      - RATE_LIMIT_METADATA_MAX=60
+      - RATE_LIMIT_METADATA_WINDOW=60
+      - RATE_LIMIT_DOWNLOAD_MAX=10
+      - RATE_LIMIT_DOWNLOAD_WINDOW=60
+      - RATE_LIMIT_INVALID_TOKEN_MAX=10
+      - RATE_LIMIT_INVALID_TOKEN_WINDOW=60
+      - RATE_LIMIT_INVALID_TOKEN_BAN_SECONDS=600
+      - RATE_LIMIT_UPLOAD_MAX=5
+      - RATE_LIMIT_UPLOAD_WINDOW=60
+      - RATE_LIMIT_UPLOAD_BYTES=524288000
+      - RATE_LIMIT_UPLOAD_BYTES_WINDOW=3600
+      - RATE_LIMIT_DOWNLOAD_PER_DROP_MAX=5
+      - RATE_LIMIT_DOWNLOAD_PER_DROP_WINDOW=60
+      - RATE_LIMIT_DOWNLOAD_PER_SESSION_MAX=10
+      - RATE_LIMIT_DOWNLOAD_PER_SESSION_WINDOW=60
+      - DOWNLOAD_STREAM_LOCK_SECONDS=300
     depends_on:
       postgres:
         condition: service_healthy
@@ -54,14 +74,37 @@ services:
       - APP_NAME=Drop
       - APP_ENV=production
       - DEBUG=false
-      - DATABASE_URL=postgresql+asyncpg://drop:drop@postgres:5432/drop
-      - RABBITMQ_URL=amqp://drop:dropdropdrop@rabbitmq:5672//
+      - DATABASE_URL=postgresql+asyncpg://drop:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/drop
+      - RABBITMQ_URL=amqp://drop:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set}@rabbitmq:5672//
       - REDIS_URL=redis://redis:6379/0
       - S3_ENDPOINT=http://minio:9000
       - S3_ACCESS_KEY=drop
-      - S3_SECRET_KEY=dropdropdrop
+      - S3_SECRET_KEY=${MINIO_PASSWORD:?MINIO_PASSWORD must be set}
       - S3_BUCKET=drop
       - S3_REGION=us-east-1
+      - MAX_UPLOAD_SIZE_BYTES=104857600
+      - DROP_TOKEN_PEPPER=${DROP_TOKEN_PEPPER:?DROP_TOKEN_PEPPER must be set}
+      - SESSION_PEPPER=${SESSION_PEPPER:?SESSION_PEPPER must be set}
+      - TRUSTED_PROXY_IPS=172.16.0.0/12
+      - SESSION_COOKIE_SECURE=true
+      - RATE_LIMIT_CREATE_MAX=10
+      - RATE_LIMIT_CREATE_WINDOW=60
+      - RATE_LIMIT_METADATA_MAX=60
+      - RATE_LIMIT_METADATA_WINDOW=60
+      - RATE_LIMIT_DOWNLOAD_MAX=10
+      - RATE_LIMIT_DOWNLOAD_WINDOW=60
+      - RATE_LIMIT_INVALID_TOKEN_MAX=10
+      - RATE_LIMIT_INVALID_TOKEN_WINDOW=60
+      - RATE_LIMIT_INVALID_TOKEN_BAN_SECONDS=600
+      - RATE_LIMIT_UPLOAD_MAX=5
+      - RATE_LIMIT_UPLOAD_WINDOW=60
+      - RATE_LIMIT_UPLOAD_BYTES=524288000
+      - RATE_LIMIT_UPLOAD_BYTES_WINDOW=3600
+      - RATE_LIMIT_DOWNLOAD_PER_DROP_MAX=5
+      - RATE_LIMIT_DOWNLOAD_PER_DROP_WINDOW=60
+      - RATE_LIMIT_DOWNLOAD_PER_SESSION_MAX=10
+      - RATE_LIMIT_DOWNLOAD_PER_SESSION_WINDOW=60
+      - DOWNLOAD_STREAM_LOCK_SECONDS=300
     depends_on:
       postgres:
         condition: service_healthy
@@ -79,14 +122,37 @@ services:
       - APP_NAME=Drop
       - APP_ENV=production
       - DEBUG=false
-      - DATABASE_URL=postgresql+asyncpg://drop:drop@postgres:5432/drop
-      - RABBITMQ_URL=amqp://drop:dropdropdrop@rabbitmq:5672//
+      - DATABASE_URL=postgresql+asyncpg://drop:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/drop
+      - RABBITMQ_URL=amqp://drop:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set}@rabbitmq:5672//
       - REDIS_URL=redis://redis:6379/0
       - S3_ENDPOINT=http://minio:9000
       - S3_ACCESS_KEY=drop
-      - S3_SECRET_KEY=dropdropdrop
+      - S3_SECRET_KEY=${MINIO_PASSWORD:?MINIO_PASSWORD must be set}
       - S3_BUCKET=drop
       - S3_REGION=us-east-1
+      - MAX_UPLOAD_SIZE_BYTES=104857600
+      - DROP_TOKEN_PEPPER=${DROP_TOKEN_PEPPER:?DROP_TOKEN_PEPPER must be set}
+      - SESSION_PEPPER=${SESSION_PEPPER:?SESSION_PEPPER must be set}
+      - TRUSTED_PROXY_IPS=172.16.0.0/12
+      - SESSION_COOKIE_SECURE=true
+      - RATE_LIMIT_CREATE_MAX=10
+      - RATE_LIMIT_CREATE_WINDOW=60
+      - RATE_LIMIT_METADATA_MAX=60
+      - RATE_LIMIT_METADATA_WINDOW=60
+      - RATE_LIMIT_DOWNLOAD_MAX=10
+      - RATE_LIMIT_DOWNLOAD_WINDOW=60
+      - RATE_LIMIT_INVALID_TOKEN_MAX=10
+      - RATE_LIMIT_INVALID_TOKEN_WINDOW=60
+      - RATE_LIMIT_INVALID_TOKEN_BAN_SECONDS=600
+      - RATE_LIMIT_UPLOAD_MAX=5
+      - RATE_LIMIT_UPLOAD_WINDOW=60
+      - RATE_LIMIT_UPLOAD_BYTES=524288000
+      - RATE_LIMIT_UPLOAD_BYTES_WINDOW=3600
+      - RATE_LIMIT_DOWNLOAD_PER_DROP_MAX=5
+      - RATE_LIMIT_DOWNLOAD_PER_DROP_WINDOW=60
+      - RATE_LIMIT_DOWNLOAD_PER_SESSION_MAX=10
+      - RATE_LIMIT_DOWNLOAD_PER_SESSION_WINDOW=60
+      - DOWNLOAD_STREAM_LOCK_SECONDS=300
     depends_on:
       postgres:
         condition: service_healthy
@@ -98,9 +164,7 @@ services:
     environment:
       POSTGRES_DB: drop
       POSTGRES_USER: drop
-      POSTGRES_PASSWORD: drop
-    ports:
-      - "${POSTGRES_PORT:-4911}:5432"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -114,10 +178,7 @@ services:
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: drop
-      MINIO_ROOT_PASSWORD: dropdropdrop
-    ports:
-      - "${MINIO_PORT:-4913}:9000"
-      - "${MINIO_CONSOLE_PORT:-4914}:9001"
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:?MINIO_PASSWORD must be set}
     volumes:
       - minio_data:/data
 
@@ -125,11 +186,8 @@ services:
     image: rabbitmq:3.13-management-alpine
     environment:
       RABBITMQ_DEFAULT_USER: drop
-      RABBITMQ_DEFAULT_PASS: dropdropdrop
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set}
       RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbit deprecated_features_permit_transient_nonexcl_queues true"
-    ports:
-      - "${RABBITMQ_PORT:-4915}:5672"
-      - "${RABBITMQ_MGMT_PORT:-4916}:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
@@ -140,8 +198,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "${REDIS_PORT:-4912}:6379"
     volumes:
       - redis_data:/data
     healthcheck:

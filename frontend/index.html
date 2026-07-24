@@ -4,9 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Drop — Простой способ делиться файлами</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #f8fafc;
@@ -463,7 +460,6 @@
       Drop
     </a>
     <div class="header-actions">
-      <button class="nav-btn" onclick="showLogsScreen()">📊 Логи & Мониторинг</button>
       <button class="nav-btn" onclick="openAboutModal()">О проекте</button>
       <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">☀️</button>
     </div>
@@ -709,6 +705,8 @@
 
   <script>
     let currentPublicId = null;
+    let currentAccessToken = null;
+    let downloadIdempotencyKey = null;
     let selectedFile = null;
 
     function toggleTheme() {
@@ -769,14 +767,6 @@
       document.getElementById('progressContainer').style.display = 'none';
     }
 
-    function showLogsScreen() {
-      window.history.pushState({}, '', '/logs');
-      hideAllScreens();
-      document.getElementById('mainContainer').classList.add('container-large');
-      document.getElementById('screenLogs').classList.remove('hidden');
-      fetchLogsData();
-    }
-
     function uploadFile() {
       if (!fileInput.files.length) {
         alert('Пожалуйста, выберите файл для загрузки');
@@ -835,7 +825,7 @@
       hideAllScreens();
       document.getElementById('screenSuccess').classList.remove('hidden');
       
-      const fullUrl = window.location.origin + '/d/' + drop.public_id;
+      const fullUrl = drop.share_url;
       document.getElementById('createdLinkInput').value = fullUrl;
       document.getElementById('createdFileName').innerText = drop.original_filename;
       document.getElementById('createdFileSize').innerText = formatBytes(drop.size_bytes);
@@ -854,14 +844,14 @@
 
     async function checkRoute() {
       const path = window.location.pathname;
-      if (path === '/logs') {
-        showLogsScreen();
-        return;
-      }
-
       const match = path.match(/^\/d\/([a-zA-Z0-9_-]+)/);
       if (match) {
         currentPublicId = match[1];
+        const fragment = window.location.hash.slice(1);
+        if (fragment) {
+          currentAccessToken = decodeURIComponent(fragment);
+          window.history.replaceState({}, document.title, path);
+        }
         await loadDropMetadata(currentPublicId);
       } else {
         showUploadScreen();
@@ -870,7 +860,9 @@
 
     async function loadDropMetadata(publicId) {
       try {
-        const res = await fetch('/api/v1/drops/' + publicId);
+        const res = await fetch('/api/v1/drops/' + publicId, {
+          headers: { 'X-Drop-Token': currentAccessToken || '' }
+        });
         if (res.status === 404) { showNotFoundScreen(); return; }
         if (res.status === 410) { showConsumedScreen(); return; }
 
@@ -906,7 +898,14 @@
       downloadBtn.innerText = 'Скачивание...';
 
       try {
-        const res = await fetch('/api/v1/drops/' + currentPublicId + '/download');
+        const res = await fetch('/api/v1/drops/' + currentPublicId + '/download', {
+          method: 'POST',
+          headers: {
+            'X-Drop-Token': currentAccessToken || '',
+            'X-Drop-Action': 'download',
+            'Idempotency-Key': downloadIdempotencyKey || (downloadIdempotencyKey = crypto.randomUUID())
+          }
+        });
 
         if (res.status === 410) { showConsumedScreen(); return; }
         if (res.status === 404) { showNotFoundScreen(); return; }
@@ -932,6 +931,7 @@
         window.URL.revokeObjectURL(blobUrl);
 
         await loadDropMetadata(currentPublicId);
+        downloadIdempotencyKey = null;
       } catch (err) {
         alert('Ошибка при скачивании файла');
       } finally {

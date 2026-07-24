@@ -1,9 +1,11 @@
 import asyncio
 import io
+import os
 import time
+
 import httpx
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = os.getenv("DROP_BASE_URL", "http://localhost:4917")
 
 
 async def main() -> None:
@@ -14,17 +16,27 @@ async def main() -> None:
     async with httpx.AsyncClient(base_url=BASE_URL, timeout=30.0) as client:
         # 1. Create single-use drop (max_downloads=1)
         print("\n1. Creating 1-download drop...")
-        files = {"file": ("test_race.txt", io.BytesIO(b"Race condition payload"), "text/plain")}
+        files = {
+            "file": (
+                "test_race.txt",
+                io.BytesIO(b"Race condition payload"),
+                "text/plain",
+            )
+        }
         data = {"expires_in_seconds": "3600", "max_downloads": "1"}
 
         resp = await client.post("/api/v1/drops", files=files, data=data)
         if resp.status_code != 201:
             print(f"Error creating drop: {resp.status_code} {resp.text}")
-            print("Ensure the API server is running (docker compose up -d or uvicorn drop.main:app)")
+            print(
+                "Ensure the API server is running (docker compose up -d or uvicorn drop.main:app)"
+            )
             return
 
         drop_data = resp.json()
         public_id = drop_data["public_id"]
+        token = drop_data["access_token"]
+        headers = {"X-Drop-Token": token, "X-Drop-Action": "download"}
         print(f"   Created drop: {public_id} (max_downloads=1)")
 
         # 2. Execute 100 concurrent download requests
@@ -33,7 +45,7 @@ async def main() -> None:
         start_time = time.perf_counter()
 
         tasks = [
-            client.get(f"/api/v1/drops/{public_id}/download")
+            client.post(f"/api/v1/drops/{public_id}/download", headers=headers)
             for _ in range(concurrent_clients)
         ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -55,12 +67,16 @@ async def main() -> None:
         print(f"   Successful:         {success_count}")
         print(f"   Rejected:           {rejected_count}")
 
-        meta_resp = await client.get(f"/api/v1/drops/{public_id}")
+        meta_resp = await client.get(
+            f"/api/v1/drops/{public_id}", headers={"X-Drop-Token": token}
+        )
         if meta_resp.status_code == 200:
             final_count = meta_resp.json()["download_count"]
             print(f"   Final counter:      {final_count}")
             invariant_violated = final_count > 1 or success_count > 1
-            print(f"   Invariant violated: {'YES (FAIL)' if invariant_violated else 'NO (PASS)'}")
+            print(
+                f"   Invariant violated: {'YES (FAIL)' if invariant_violated else 'NO (PASS)'}"
+            )
         else:
             print(f"   Drop status check:  {meta_resp.status_code}")
 

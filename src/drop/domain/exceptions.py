@@ -27,6 +27,6 @@ class FileTooLargeError(DropError):
 
 
 class RateLimitExceededError(DropError):
-    pass
-
-
+    def __init__(self, *, retry_after: int) -> None:
+        self.retry_after = max(retry_after, 0)
+        super().__init__("Rate limit exceeded")
