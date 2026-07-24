@@ -1,10 +1,10 @@
-from uuid import UUID
 from datetime import UTC, datetime
+from uuid import UUID
 
-from sqlalchemy import select, update, case
+from sqlalchemy import case, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from drop.infrastructure.database.models import DropModel, DropStatus
+from drop.infrastructure.database.models import DownloadEventModel, DropModel, DropStatus
 
 
 class DropRepository:
@@ -86,3 +86,15 @@ class DropRepository:
 
         return list(result.scalars().all())
 
+    async def record_download_event(self, event: DownloadEventModel) -> None:
+        self._session.add(event)
+
+    async def get_all_drops(self, limit: int = 50) -> list[DropModel]:
+        stmt = select(DropModel).order_by(DropModel.created_at.desc()).limit(limit)
+        res = await self._session.execute(stmt)
+        return list(res.scalars().all())
+
+    async def get_all_download_events(self, limit: int = 50) -> list[DownloadEventModel]:
+        stmt = select(DownloadEventModel).order_by(DownloadEventModel.created_at.desc()).limit(limit)
+        res = await self._session.execute(stmt)
+        return list(res.scalars().all())

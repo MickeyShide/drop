@@ -1,7 +1,8 @@
+import time
 from typing import Annotated, Any
 import urllib.parse
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile, status
 from fastapi.responses import StreamingResponse
 
 from drop.api.dependencies import DropServiceDep
@@ -55,6 +56,14 @@ async def create_drop(
 
 
 @router.get(
+    "/logs/data",
+    summary="Get admin and task logs dashboard data",
+)
+async def get_logs_data(service: DropServiceDep) -> dict[str, Any]:
+    return await service.get_admin_logs()
+
+
+@router.get(
     "/{public_id}",
     response_model=DropResponse,
     dependencies=[Depends(RateLimitMetadata)],
@@ -83,8 +92,23 @@ async def get_drop(public_id: str, service: DropServiceDep) -> DropResponse:
     responses=ERROR_RESPONSES,
     summary="Download drop file",
 )
-async def download_drop(public_id: str, service: DropServiceDep) -> StreamingResponse:
-    body, filename, size_bytes, content_type = await service.get_download_stream(public_id)
+async def download_drop(
+    public_id: str,
+    request: Request,
+    service: DropServiceDep,
+) -> StreamingResponse:
+    start_time = time.perf_counter()
+    ip_address = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+    request_id = request.headers.get("x-request-id")
+
+    body, filename, size_bytes, content_type = await service.get_download_stream(
+        public_id=public_id,
+        ip_address=ip_address,
+        user_agent=user_agent,
+        request_id=request_id,
+        duration_ms=(time.perf_counter() - start_time) * 1000,
+    )
 
     def iterfile():
         while chunk := body.read(1024 * 1024):
@@ -101,4 +125,3 @@ async def download_drop(public_id: str, service: DropServiceDep) -> StreamingRes
         media_type=content_type or "application/octet-stream",
         headers=headers,
     )
-

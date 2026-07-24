@@ -50,3 +50,8 @@ class OutboxRepository:
         )
 
         await self._session.execute(stmt)
+
+    async def get_all_events(self, limit: int = 50) -> list[OutboxEventModel]:
+        stmt = select(OutboxEventModel).order_by(OutboxEventModel.created_at.desc()).limit(limit)
+        res = await self._session.execute(stmt)
+        return list(res.scalars().all())

@@ -1,28 +1,33 @@
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 from fastapi.testclient import TestClient
 
 from drop.infrastructure.database.engine import get_session
 from drop.main import app
 
-client = TestClient(app)
+
+@pytest.fixture
+def client():
+    with TestClient(app) as c:
+        yield c
 
 
-def test_request_id_middleware_generates_header() -> None:
+def test_request_id_middleware_generates_header(client: TestClient) -> None:
     response = client.get("/health/live")
     assert response.status_code == 200
     assert "X-Request-ID" in response.headers
     assert len(response.headers["X-Request-ID"]) > 0
 
 
-def test_request_id_middleware_preserves_client_header() -> None:
+def test_request_id_middleware_preserves_client_header(client: TestClient) -> None:
     custom_id = "custom-client-request-id-12345"
     response = client.get("/health/live", headers={"X-Request-ID": custom_id})
     assert response.status_code == 200
     assert response.headers.get("X-Request-ID") == custom_id
 
 
-def test_unified_error_response_format_404() -> None:
+def test_unified_error_response_format_404(client: TestClient) -> None:
     custom_id = "test-req-id-404"
 
     async def override_get_session():
@@ -50,7 +55,7 @@ def test_unified_error_response_format_404() -> None:
         app.dependency_overrides.clear()
 
 
-def test_validation_error_response_format_422() -> None:
+def test_validation_error_response_format_422(client: TestClient) -> None:
     response = client.post(
         "/api/v1/drops",
         data={"expires_in_seconds": -5},

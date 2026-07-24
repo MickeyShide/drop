@@ -8,7 +8,7 @@ services:
       - ./frontend:/usr/share/nginx/html:ro
     depends_on:
       api:
-        condition: service_started
+        condition: service_healthy
 
   api:
     build:
@@ -39,6 +39,11 @@ services:
         condition: service_healthy
       minio:
         condition: service_started
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8000/health/live || exit 1" ]
+      interval: 3s
+      timeout: 3s
+      retries: 10
 
   worker:
     build:
@@ -117,10 +122,11 @@ services:
       - minio_data:/data
 
   rabbitmq:
-    image: rabbitmq:4-management-alpine
+    image: rabbitmq:3.13-management-alpine
     environment:
       RABBITMQ_DEFAULT_USER: drop
       RABBITMQ_DEFAULT_PASS: dropdropdrop
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbit deprecated_features_permit_transient_nonexcl_queues true"
     ports:
       - "${RABBITMQ_PORT:-4915}:5672"
       - "${RABBITMQ_MGMT_PORT:-4916}:15672"

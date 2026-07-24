@@ -15,7 +15,7 @@
       --text-muted: #64748b;
       --primary: #4f46e5;
       --primary-hover: #4338ca;
-      --primary-light: #eeef2b15;
+      --primary-light: rgba(79, 70, 229, 0.08);
       --border: #e2e8f0;
       --success: #10b981;
       --danger: #ef4444;
@@ -81,7 +81,7 @@
     .header-actions {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 12px;
     }
 
     .nav-btn {
@@ -97,6 +97,7 @@
 
     .nav-btn:hover {
       color: var(--text-main);
+      background: var(--primary-light);
     }
 
     .theme-toggle {
@@ -130,6 +131,11 @@
       padding: 36px 32px;
       text-align: center;
       position: relative;
+    }
+
+    .container-large {
+      max-width: 960px;
+      text-align: left;
     }
 
     h1 {
@@ -339,6 +345,70 @@
       height: 32px;
     }
 
+    /* Logs Dashboard Tabs & Tables */
+    .tab-bar {
+      display: flex;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+      padding-bottom: 8px;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+      background: var(--primary-light);
+    }
+
+    .table-container {
+      overflow-x: auto;
+    }
+
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      text-align: left;
+    }
+
+    table.data-table th, table.data-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    table.data-table th {
+      background: var(--bg);
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.5px;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .pill-active { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+    .pill-consumed { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+    .pill-expired { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+    .pill-pending { background: rgba(79, 70, 229, 0.15); color: var(--primary); }
+
     /* Modal */
     .modal {
       display: none;
@@ -393,13 +463,15 @@
       Drop
     </a>
     <div class="header-actions">
+      <button class="nav-btn" onclick="showLogsScreen()">📊 Логи & Мониторинг</button>
       <button class="nav-btn" onclick="openAboutModal()">О проекте</button>
       <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">☀️</button>
     </div>
   </header>
 
   <main>
-    <div class="container">
+    <!-- MAIN CONTAINER FOR SCREENS -->
+    <div class="container" id="mainContainer">
       
       <!-- SCREEN 1: UPLOAD FORM -->
       <div id="screenUpload">
@@ -533,6 +605,82 @@
         <button class="btn-secondary" onclick="showUploadScreen()">Создать свой Drop</button>
       </div>
 
+      <!-- SCREEN 7: LOGS DASHBOARD -->
+      <div id="screenLogs" class="hidden">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <div>
+            <h1 style="font-size: 1.5rem;">Панель логов и мониторинга</h1>
+            <p class="subtitle" style="margin-bottom: 0;">Отслеживание запросов, скачиваний и фоновых задач Celery</p>
+          </div>
+          <button class="btn-secondary" style="width: auto; margin-top: 0; padding: 8px 16px;" onclick="fetchLogsData()">🔄 Обновить</button>
+        </div>
+
+        <div class="tab-bar">
+          <button class="tab-btn active" id="tabBtnDownloads" onclick="switchLogsTab('downloads')">Скачивания (Events)</button>
+          <button class="tab-btn" id="tabBtnDrops" onclick="switchLogsTab('drops')">Файлы (Drops)</button>
+          <button class="tab-btn" id="tabBtnTasks" onclick="switchLogsTab('tasks')">Задачи Celery (Outbox)</button>
+        </div>
+
+        <!-- TAB 1: DOWNLOAD EVENTS -->
+        <div id="tabContentDownloads" class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Request ID</th>
+                <th>Файл</th>
+                <th>IP клиента</th>
+                <th>Скачивание</th>
+                <th>Время (ms)</th>
+                <th>Дата</th>
+              </tr>
+            </thead>
+            <tbody id="tableBodyDownloads">
+              <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Загрузка данных...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- TAB 2: DROPS -->
+        <div id="tabContentDrops" class="table-container hidden">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Имя файла</th>
+                <th>Размер</th>
+                <th>Скачивания</th>
+                <th>Срок действия</th>
+                <th>Статус</th>
+              </tr>
+            </thead>
+            <tbody id="tableBodyDrops">
+              <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Загрузка данных...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- TAB 3: TASKS -->
+        <div id="tabContentTasks" class="table-container hidden">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID задачи</th>
+                <th>Событие</th>
+                <th>Payload</th>
+                <th>Статус</th>
+                <th>Создано</th>
+                <th>Обработано</th>
+              </tr>
+            </thead>
+            <tbody id="tableBodyTasks">
+              <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Загрузка данных...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <button class="btn-secondary" onclick="showUploadScreen()">На главную</button>
+      </div>
+
     </div>
   </main>
 
@@ -607,7 +755,10 @@
     }
 
     function hideAllScreens() {
-      const screens = ['screenUpload', 'screenSuccess', 'screenDownload', 'screenConsumed', 'screenExpired', 'screenNotFound'];
+      const mainContainer = document.getElementById('mainContainer');
+      mainContainer.classList.remove('container-large');
+
+      const screens = ['screenUpload', 'screenSuccess', 'screenDownload', 'screenConsumed', 'screenExpired', 'screenNotFound', 'screenLogs'];
       screens.forEach(s => document.getElementById(s).classList.add('hidden'));
     }
 
@@ -616,6 +767,14 @@
       hideAllScreens();
       document.getElementById('screenUpload').classList.remove('hidden');
       document.getElementById('progressContainer').style.display = 'none';
+    }
+
+    function showLogsScreen() {
+      window.history.pushState({}, '', '/logs');
+      hideAllScreens();
+      document.getElementById('mainContainer').classList.add('container-large');
+      document.getElementById('screenLogs').classList.remove('hidden');
+      fetchLogsData();
     }
 
     function uploadFile() {
@@ -695,8 +854,12 @@
 
     async function checkRoute() {
       const path = window.location.pathname;
-      const match = path.match(/^\/d\/([a-zA-Z0-9_-]+)/);
+      if (path === '/logs') {
+        showLogsScreen();
+        return;
+      }
 
+      const match = path.match(/^\/d\/([a-zA-Z0-9_-]+)/);
       if (match) {
         currentPublicId = match[1];
         await loadDropMetadata(currentPublicId);
@@ -708,25 +871,13 @@
     async function loadDropMetadata(publicId) {
       try {
         const res = await fetch('/api/v1/drops/' + publicId);
-        if (res.status === 404) {
-          showNotFoundScreen();
-          return;
-        }
-        if (res.status === 410) {
-          showConsumedScreen();
-          return;
-        }
+        if (res.status === 404) { showNotFoundScreen(); return; }
+        if (res.status === 410) { showConsumedScreen(); return; }
 
         const data = await res.json();
         
-        if (data.status === 'EXPIRED') {
-          showExpiredScreen();
-          return;
-        }
-        if (data.status === 'CONSUMED') {
-          showConsumedScreen();
-          return;
-        }
+        if (data.status === 'EXPIRED') { showExpiredScreen(); return; }
+        if (data.status === 'CONSUMED') { showConsumedScreen(); return; }
 
         showDownloadScreen(data);
       } catch (err) {
@@ -757,20 +908,9 @@
       try {
         const res = await fetch('/api/v1/drops/' + currentPublicId + '/download');
 
-        if (res.status === 410) {
-          showConsumedScreen();
-          return;
-        }
-
-        if (res.status === 404) {
-          showNotFoundScreen();
-          return;
-        }
-
-        if (!res.ok) {
-          alert('Не удалось скачать файл');
-          return;
-        }
+        if (res.status === 410) { showConsumedScreen(); return; }
+        if (res.status === 404) { showNotFoundScreen(); return; }
+        if (!res.ok) { alert('Не удалось скачать файл'); return; }
 
         const disposition = res.headers.get('Content-Disposition');
         let filename = 'download';
@@ -798,6 +938,102 @@
         downloadBtn.disabled = false;
         downloadBtn.innerText = 'Скачать файл';
       }
+    }
+
+    /* LOGS DASHBOARD LOGIC */
+    async function fetchLogsData() {
+      try {
+        const res = await fetch('/api/v1/drops/logs/data');
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        renderDownloadEvents(data.download_events);
+        renderDrops(data.drops);
+        renderTasks(data.tasks);
+      } catch (err) {
+        console.error('Failed to fetch logs', err);
+      }
+    }
+
+    function renderDownloadEvents(events) {
+      const tbody = document.getElementById('tableBodyDownloads');
+      if (!events || !events.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Логи скачиваний пока пусты</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = events.map(e => `
+        <tr>
+          <td><code style="font-size: 0.8rem; background: var(--bg); padding: 2px 6px; border-radius: 4px;">${e.request_id || 'N/A'}</code></td>
+          <td><strong>${escapeHtml(e.filename)}</strong></td>
+          <td>${e.ip_address || '127.0.0.1'}</td>
+          <td><span class="pill pill-pending">${e.download_number} из ${e.max_downloads || '∞'}</span></td>
+          <td><strong>${e.duration_ms !== null ? e.duration_ms + ' ms' : '-'}</strong></td>
+          <td style="color: var(--text-muted);">${new Date(e.created_at).toLocaleString()}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderDrops(drops) {
+      const tbody = document.getElementById('tableBodyDrops');
+      if (!drops || !drops.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Загруженных файлов пока нет</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = drops.map(d => {
+        let pillClass = 'pill-active';
+        if (d.status === 'CONSUMED') pillClass = 'pill-consumed';
+        if (d.status === 'EXPIRED') pillClass = 'pill-expired';
+
+        return `
+          <tr>
+            <td><code>${d.public_id}</code></td>
+            <td><strong>${escapeHtml(d.original_filename)}</strong></td>
+            <td>${formatBytes(d.size_bytes)}</td>
+            <td>${d.download_count} / ${d.max_downloads || '∞'}</td>
+            <td style="color: var(--text-muted);">${new Date(d.expires_at).toLocaleString()}</td>
+            <td><span class="pill ${pillClass}">${d.status}</span></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderTasks(tasks) {
+      const tbody = document.getElementById('tableBodyTasks');
+      if (!tasks || !tasks.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Задачи Celery пока не выполнялись</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = tasks.map(t => {
+        let pillClass = t.status === 'PROCESSED' ? 'pill-active' : 'pill-pending';
+        return `
+          <tr>
+            <td><code style="font-size: 0.75rem;">${t.id.substring(0, 8)}...</code></td>
+            <td><strong>${t.event_type}</strong></td>
+            <td><code style="font-size: 0.75rem;">${JSON.stringify(t.payload)}</code></td>
+            <td><span class="pill ${pillClass}">${t.status}</span></td>
+            <td style="color: var(--text-muted);">${new Date(t.created_at).toLocaleString()}</td>
+            <td style="color: var(--text-muted);">${t.processed_at ? new Date(t.processed_at).toLocaleString() : '-'}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function switchLogsTab(tabName) {
+      ['Downloads', 'Drops', 'Tasks'].forEach(t => {
+        document.getElementById('tabBtn' + t).classList.remove('active');
+        document.getElementById('tabContent' + t).classList.add('hidden');
+      });
+
+      const cap = tabName.charAt(0).toUpperCase() + tabName.slice(1);
+      document.getElementById('tabBtn' + cap).classList.add('active');
+      document.getElementById('tabContent' + cap).classList.remove('hidden');
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
     function showConsumedScreen() { hideAllScreens(); document.getElementById('screenConsumed').classList.remove('hidden'); }

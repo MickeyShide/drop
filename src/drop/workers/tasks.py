@@ -13,6 +13,15 @@ from drop.workers.celery_app import celery_app
 logger = logging.getLogger("drop.workers")
 
 
+async def _dispose_stale_engine() -> None:
+    try:
+        bind = getattr(SessionFactory, "kw", {}).get("bind")
+        if bind and hasattr(bind, "dispose"):
+            await bind.dispose()
+    except Exception:
+        pass
+
+
 @celery_app.task(name="drop.ping")
 def ping() -> str:
     return "pong"
@@ -44,6 +53,7 @@ def delete_drop_file(self, drop_id: str) -> None:
 
 async def _delete_drop_file(drop_id: UUID) -> None:
     d_token = drop_id_var.set(str(drop_id))
+    await _dispose_stale_engine()
     try:
         async with SessionFactory() as session:
             service = DropCleanupService(
@@ -75,6 +85,7 @@ def cleanup_expired_drops(self) -> int:
 
 
 async def _cleanup_expired_drops() -> int:
+    await _dispose_stale_engine()
     async with SessionFactory() as session:
         service = DropCleanupService(
             session=session,
@@ -105,6 +116,7 @@ def publish_outbox_events(self) -> int:
 
 
 async def _publish_outbox_events() -> int:
+    await _dispose_stale_engine()
     async with SessionFactory() as session:
         from drop.application.services.outbox import OutboxPublisherService
         from drop.infrastructure.repositories.outbox import OutboxRepository

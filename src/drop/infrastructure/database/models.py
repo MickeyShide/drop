@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import BigInteger, DateTime, Enum, Integer, JSON, String
+from sqlalchemy import BigInteger, DateTime, Enum, Float, Integer, JSON, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -138,3 +138,49 @@ class OutboxEventModel(Base):
         nullable=True,
     )
 
+
+class DownloadEventModel(Base):
+    __tablename__ = "download_events"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+
+    drop_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        nullable=False,
+        index=True,
+    )
+
+    ip_address: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+    )
+
+    user_agent: Mapped[str | None] = mapped_column(
+        String(512),
+        nullable=True,
+    )
+
+    request_id: Mapped[str | None] = mapped_column(
+        String(128),
+        nullable=True,
+    )
+
+    download_number: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
+
+    duration_ms: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+    )

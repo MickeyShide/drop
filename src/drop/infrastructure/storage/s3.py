@@ -20,10 +20,21 @@ class S3Storage:
             aws_secret_access_key=settings.s3_secret_key,
             region_name=settings.s3_region,
         )
+        self._ensure_bucket()
+
+    def _ensure_bucket(self) -> None:
+        try:
+            self._client.head_bucket(Bucket=self._bucket)
+        except Exception:
+            try:
+                self._client.create_bucket(Bucket=self._bucket)
+            except Exception:
+                pass
 
     def upload(
         self, file: BinaryIO, storage_key: str, content_type: str | None
     ) -> None:
+        self._ensure_bucket()
         extra_args: dict[str, str] = {}
 
         if content_type:
@@ -75,5 +86,3 @@ class S3Storage:
         content_type = obj.get("ContentType")
         content_length = obj.get("ContentLength", 0)
         return obj["Body"], content_length, content_type
-
-
