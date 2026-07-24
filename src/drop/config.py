@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,6 +27,16 @@ class Settings(BaseSettings):
     s3_region: str = "us-east-1"
 
     max_upload_size_bytes: int = 100 * 1024 * 1024
+
+    @field_validator("debug", mode="before")
+    @classmethod
+    def parse_debug(cls, value: object) -> object:
+        if isinstance(value, str) and value.strip().lower() in {
+            "release",
+            "production",
+        }:
+            return False
+        return value
 
 
 @lru_cache

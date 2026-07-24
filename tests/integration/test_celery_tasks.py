@@ -70,7 +70,8 @@ async def test_cleanup_expired_drops_task(
         await session.commit()
         drop_id = expired_drop.id
 
-    with patch("drop.workers.tasks.SessionFactory", session_factory):
+    with patch("drop.workers.tasks.SessionFactory", session_factory), \
+         patch("drop.workers.tasks.S3Storage"):
         count = await _cleanup_expired_drops()
         assert count >= 1
 

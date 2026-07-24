@@ -22,6 +22,8 @@ def get_redis_client() -> Redis:
         _redis_client = aioredis.from_url(
             settings.redis_url,
             decode_responses=True,
+            socket_timeout=0.5,
+            socket_connect_timeout=0.5,
         )
         _redis_loop = current_loop
 

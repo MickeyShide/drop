@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -9,8 +9,22 @@ from drop.main import app
 
 @pytest.fixture
 def client():
-    with TestClient(app) as c:
-        yield c
+    with patch("drop.api.rate_limit.get_redis_client") as mock_redis, \
+         patch("drop.api.dependencies.S3Storage"):
+        mock_instance = AsyncMock()
+        mock_instance.incr.return_value = 1
+        mock_instance.expire.return_value = True
+        mock_redis.return_value = mock_instance
+
+        async def override_get_session():
+            yield AsyncMock()
+
+        app.dependency_overrides[get_session] = override_get_session
+        try:
+            with TestClient(app) as c:
+                yield c
+        finally:
+            app.dependency_overrides.clear()
 
 
 def test_request_id_middleware_generates_header(client: TestClient) -> None:
