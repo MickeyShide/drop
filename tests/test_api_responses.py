@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
+from drop.api.dependencies import get_drop_service
 from drop.infrastructure.database.engine import get_session
 from drop.main import app
 
@@ -73,7 +74,7 @@ def test_unified_error_response_format_404(client: TestClient) -> None:
 def test_validation_error_response_format_422(client: TestClient) -> None:
     response = client.post(
         "/api/v1/drops",
-        data={"expires_in_seconds": -5},
+        data={"expires_in_seconds": "-5"},
     )
 
     assert response.status_code == 422
@@ -83,3 +84,23 @@ def test_validation_error_response_format_422(client: TestClient) -> None:
     assert data["error"]["code"] == "VALIDATION_ERROR"
     assert "details" in data["error"]
     assert "request_id" in data
+
+
+def test_logs_dashboard_data_is_public(client: TestClient) -> None:
+    service = AsyncMock()
+    expected_data: dict[str, list[object]] = {
+        "drops": [],
+        "download_events": [],
+        "tasks": [],
+    }
+    service.get_admin_logs.return_value = expected_data
+    app.dependency_overrides[get_drop_service] = lambda: service
+
+    try:
+        response = client.get("/api/v1/drops/logs/data")
+
+        assert response.status_code == 200
+        assert response.json() == expected_data
+        service.get_admin_logs.assert_awaited_once()
+    finally:
+        app.dependency_overrides.clear()

@@ -84,8 +84,9 @@ API streams objects only after capability and grant checks. Downloads use
 
 Only Nginx is Internet-facing in the production Compose file. PostgreSQL,
 Redis, RabbitMQ, RabbitMQ management, MinIO API/console and FastAPI are
-internal. Public admin/log endpoints are not provided. Metrics remain an
-internal application endpoint and are not proxied by Nginx.
+internal. The public logs dashboard is available at `/logs`; its data endpoint
+is rate-limited but intentionally does not require authentication. Metrics
+remain an internal application endpoint and are not proxied by Nginx.
 
 Sensitive responses receive no-store, no-referrer, nosniff, frame-deny,
 noindex and CSP headers. Production Nginx also emits HSTS; TLS termination

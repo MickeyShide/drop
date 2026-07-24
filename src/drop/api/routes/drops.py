@@ -91,6 +91,17 @@ async def create_drop(
 
 
 @router.get(
+    "/logs/data",
+    dependencies=[Depends(rate_limit_metadata)],
+    responses=ERROR_RESPONSES,
+    summary="Get public logs dashboard data",
+)
+async def get_logs_data(service: DropServiceDep) -> dict[str, Any]:
+    """Return the data displayed by the public logs dashboard."""
+    return await service.get_admin_logs()
+
+
+@router.get(
     "/{public_id}",
     response_model=DropResponse,
     dependencies=[Depends(rate_limit_metadata)],

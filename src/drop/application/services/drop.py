@@ -115,6 +115,80 @@ class DropService:
 
         return drop
 
+    async def get_admin_logs(self) -> dict[str, Any]:
+        """Return recent activity for the public logs dashboard."""
+        drops = await self._repository.get_all_drops(50)
+        events = await self._repository.get_all_download_events(50)
+        outbox_events = await self._outbox_repo.get_all_events(50)
+
+        drop_map = {drop.id: drop for drop in drops}
+        formatted_events = []
+        for event in events:
+            drop = drop_map.get(event.drop_id)
+            formatted_events.append(
+                {
+                    "id": event.id,
+                    "request_id": event.request_id,
+                    "ip_address": event.ip_address,
+                    "filename": drop.original_filename if drop else "Unknown",
+                    "public_id": drop.public_id if drop else "Unknown",
+                    "download_number": event.download_number,
+                    "max_downloads": drop.max_downloads if drop else None,
+                    "duration_ms": (
+                        round(event.duration_ms, 2)
+                        if event.duration_ms is not None
+                        else None
+                    ),
+                    "created_at": (
+                        event.created_at.isoformat() if event.created_at else None
+                    ),
+                }
+            )
+
+        return {
+            "drops": [
+                {
+                    "public_id": drop.public_id,
+                    "original_filename": drop.original_filename,
+                    "size_bytes": drop.size_bytes,
+                    "download_count": drop.download_count,
+                    "max_downloads": drop.max_downloads,
+                    "status": (
+                        drop.status.value
+                        if hasattr(drop.status, "value")
+                        else str(drop.status)
+                    ),
+                    "created_at": (
+                        drop.created_at.isoformat() if drop.created_at else None
+                    ),
+                    "expires_at": (
+                        drop.expires_at.isoformat() if drop.expires_at else None
+                    ),
+                }
+                for drop in drops
+            ],
+            "download_events": formatted_events,
+            "tasks": [
+                {
+                    "id": str(task.id),
+                    "event_type": task.event_type,
+                    "status": (
+                        task.status.value
+                        if hasattr(task.status, "value")
+                        else str(task.status)
+                    ),
+                    "payload": task.payload,
+                    "created_at": (
+                        task.created_at.isoformat() if task.created_at else None
+                    ),
+                    "processed_at": (
+                        task.processed_at.isoformat() if task.processed_at else None
+                    ),
+                }
+                for task in outbox_events
+            ],
+        }
+
     async def create(
         self,
         file: UploadFile,

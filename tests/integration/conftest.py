@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from testcontainers.postgres import PostgresContainer
+from testcontainers.postgres import PostgresContainer  # type: ignore[import-untyped]
 
 from drop.infrastructure.database.base import Base
 from drop.infrastructure.database import models as _models  # noqa: F401

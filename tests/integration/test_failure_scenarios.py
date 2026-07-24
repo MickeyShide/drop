@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from starlette.datastructures import Headers
 
 from drop.application.services.cleanup import DropCleanupService
 from drop.application.services.drop import DropService
@@ -30,7 +31,7 @@ async def test_s3_upload_failure_marks_drop_failed_and_cleans_partial_object(
         fake_file = UploadFile(
             filename="test_fail.txt",
             file=io.BytesIO(b"sample file content for upload failure test"),
-            headers={"content-type": "text/plain"},
+            headers=Headers({"content-type": "text/plain"}),
         )
 
         with pytest.raises(Exception, match="S3 bucket connection timeout"):

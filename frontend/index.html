@@ -460,6 +460,7 @@
       Drop
     </a>
     <div class="header-actions">
+      <a class="nav-btn" href="/logs">Логи</a>
       <button class="nav-btn" onclick="openAboutModal()">О проекте</button>
       <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">☀️</button>
     </div>
@@ -767,6 +768,13 @@
       document.getElementById('progressContainer').style.display = 'none';
     }
 
+    function showLogsScreen() {
+      hideAllScreens();
+      document.getElementById('mainContainer').classList.add('container-large');
+      document.getElementById('screenLogs').classList.remove('hidden');
+      fetchLogsData();
+    }
+
     function uploadFile() {
       if (!fileInput.files.length) {
         alert('Пожалуйста, выберите файл для загрузки');
@@ -844,6 +852,11 @@
 
     async function checkRoute() {
       const path = window.location.pathname;
+      if (path === '/logs') {
+        showLogsScreen();
+        return;
+      }
+
       const match = path.match(/^\/d\/([a-zA-Z0-9_-]+)/);
       if (match) {
         currentPublicId = match[1];
