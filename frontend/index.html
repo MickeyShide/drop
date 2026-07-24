@@ -563,14 +563,12 @@
     let currentPublicId = null;
     let selectedFile = null;
 
-    // Theme Toggle
     function toggleTheme() {
       const isDark = document.body.getAttribute('data-theme') === 'dark';
       document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
       document.getElementById('themeToggleBtn').innerText = isDark ? '☀️' : '🌙';
     }
 
-    // Drag & Drop Handlers
     const dropzone = document.getElementById('dropzone');
     const fileInput = document.getElementById('fileInput');
 
@@ -620,7 +618,6 @@
       document.getElementById('progressContainer').style.display = 'none';
     }
 
-    // Upload Execution
     function uploadFile() {
       if (!fileInput.files.length) {
         alert('Пожалуйста, выберите файл для загрузки');
@@ -696,7 +693,6 @@
       setTimeout(() => copyBtn.innerText = 'Копировать', 2000);
     }
 
-    // Router Check
     async function checkRoute() {
       const path = window.location.pathname;
       const match = path.match(/^\/d\/([a-zA-Z0-9_-]+)/);
@@ -717,7 +713,7 @@
           return;
         }
         if (res.status === 410) {
-          showExpiredScreen();
+          showConsumedScreen();
           return;
         }
 
@@ -751,11 +747,58 @@
       document.getElementById('downloadRemaining').innerText = remaining;
     }
 
-    function executeDownload() {
+    async function executeDownload() {
       if (!currentPublicId) return;
-      window.location.href = '/api/v1/drops/' + currentPublicId + '/download';
-    }
 
+      const downloadBtn = document.getElementById('downloadBtn');
+      downloadBtn.disabled = true;
+      downloadBtn.innerText = 'Скачивание...';
+
+      try {
+        const res = await fetch('/api/v1/drops/' + currentPublicId + '/download');
+
+        if (res.status === 410) {
+          showConsumedScreen();
+          return;
+        }
+
+        if (res.status === 404) {
+          showNotFoundScreen();
+          return;
+        }
+
+        if (!res.ok) {
+          alert('Не удалось скачать файл');
+          return;
+        }
+
+        const disposition = res.headers.get('Content-Disposition');
+        let filename = 'download';
+        if (disposition && disposition.includes('filename=')) {
+          const filenameMatch = disposition.match(/filename\*?=(?:UTF-8'')?["']?([^"';\n]+)["']?/i);
+          if (filenameMatch && filenameMatch[1]) {
+            filename = decodeURIComponent(filenameMatch[1]);
+          }
+        }
+
+        const blob = await res.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(blobUrl);
+
+        await loadDropMetadata(currentPublicId);
+      } catch (err) {
+        alert('Ошибка при скачивании файла');
+      } finally {
+        downloadBtn.disabled = false;
+        downloadBtn.innerText = 'Скачать файл';
+      }
+    }
 
     function showConsumedScreen() { hideAllScreens(); document.getElementById('screenConsumed').classList.remove('hidden'); }
     function showExpiredScreen() { hideAllScreens(); document.getElementById('screenExpired').classList.remove('hidden'); }
@@ -764,7 +807,6 @@
     function openAboutModal() { document.getElementById('aboutModal').style.display = 'flex'; }
     function closeAboutModal() { document.getElementById('aboutModal').style.display = 'none'; }
 
-    // Init Route on Page Load
     window.addEventListener('popstate', checkRoute);
     checkRoute();
   </script>
