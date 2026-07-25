@@ -70,13 +70,17 @@ upload
 - Идемпотентная Celery-задача удаления с recoverable `DELETING` state.
 - Outbox claims через `FOR UPDATE SKIP LOCKED`, lease, attempts, last error и
   terminal `FAILED` state.
-- JSON-логирование API/Celery, request IDs, shared Prometheus multiprocess
-  metrics и health checks PostgreSQL, Redis, RabbitMQ и MinIO.
+- JSON-логирование API/Celery, request IDs, отдельные Prometheus exporters API и
+  Celery worker, health checks PostgreSQL, Redis, RabbitMQ и MinIO.
 - Nginx, production Compose, полностью автономный local Compose и GitHub
   Actions CI/CD.
 - Публичная панель `/logs` с последними Drop, download events и Outbox events.
+- Полностью публичный observability showcase: `/stats`, raw `/metrics`,
+  Prometheus UI и read-only Grafana dashboard.
+- Prometheus собирает API, PostgreSQL, Redis, RabbitMQ, MinIO и Nginx через
+  exporters; Grafana dashboard provision-ится из репозитория.
 - Реальные Redis, MinIO и RabbitMQ Testcontainers checks.
-- 68 проходящих автоматических тестов.
+- 70 проходящих автоматических тестов.
 
 ### Partially implemented
 
@@ -137,7 +141,9 @@ environment или `.env`.
 | MinIO / S3 API | Хранение бинарных объектов |
 | boto3 | Synchronous S3 client, вызываемый через thread pool |
 | Nginx | Единственная production ingress-точка, static frontend и reverse proxy |
-| Docker / Docker Compose | Восемь production/local services |
+| Prometheus | Сбор, хранение и публичный query UI метрик |
+| Grafana | Публичный read-only dashboard, provisioned из репозитория |
+| Docker / Docker Compose | Четырнадцать production/local services |
 | uv | Управление зависимостями и запуск команд |
 | pytest / pytest-asyncio | Unit и integration tests |
 | Testcontainers | Реальные PostgreSQL, Redis, MinIO и RabbitMQ для integration tests |
@@ -159,13 +165,21 @@ Browser
   │ HTTP/HTTPS через внешний TLS terminator, если он настроен
   ▼
 Nginx :80
-  ├── /, /d/*, /logs ───────────────► static frontend
+  ├── /, /d/*, /logs, /stats ───────► static frontend
   ├── /api/*, /health/* ────────────► FastAPI :8000
   │                                     ├── PostgreSQL
   │                                     ├── Redis
   │                                     └── MinIO/S3
-  │
-  └── /metrics не proxy-ится наружу
+  ├── /metrics ─────────────────────► FastAPI :8000 Prometheus exposition
+  ├── /prometheus/ ─────────────────► Prometheus :9090
+  └── /grafana/ ────────────────────► Grafana :3000 (anonymous Viewer)
+
+Prometheus
+  ├── FastAPI /metrics
+  ├── worker-metrics :8001/metrics (private Celery multiprocess registry)
+  ├── postgres-exporter, redis-exporter, nginx-exporter
+  ├── RabbitMQ Prometheus plugin
+  └── MinIO v3 metrics endpoint
 
 Celery Beat
   │ schedules: 10s / 5min
@@ -836,8 +850,8 @@ events и periodic candidate sweep сохраняют cleanup intent.
 
 ## 17. API
 
-В FastAPI явно объявлено 7 endpoints. Через production Nginx доступны 6:
-четыре Drop endpoints и два health endpoints. `/metrics` остаётся internal.
+В FastAPI явно объявлено 7 endpoints, и все они доступны через production Nginx.
+Помимо API публичны Prometheus, Grafana и SPA showcase routes.
 
 ### Public Drop endpoints
 
@@ -884,17 +898,19 @@ Process liveness, всегда `{status: "ok"}` при работающем even
 
 #### `GET /health/ready`
 
-Проверяет PostgreSQL `SELECT 1`, Redis `PING`, MinIO `list_buckets`. Возвращает
-503, если хотя бы одна проверка упала. RabbitMQ не проверяется.
+Проверяет PostgreSQL `SELECT 1`, Redis `PING`, RabbitMQ broker connection и
+MinIO `list_buckets`. Возвращает 503, если хотя бы одна проверка упала.
 
 #### `GET /metrics`
 
-Prometheus text format. Endpoint исключён из OpenAPI и не proxy-ится Nginx.
+Prometheus text format. Endpoint исключён из OpenAPI, но намеренно публично
+proxy-ится Nginx как `/metrics` для showcase и внешнего scraping.
 
 ### Frontend routes
 
-Nginx SPA fallback обслуживает `/`, `/d/{public_id}` и `/logs`. Это не отдельные
-FastAPI routes.
+Nginx SPA fallback обслуживает `/`, `/d/{public_id}`, `/logs` и `/stats`. Это
+не отдельные FastAPI routes. `/stats` запрашивает публичный Prometheus HTTP API
+и показывает короткую витрину ключевых counters.
 
 В non-production FastAPI также включает автоматически генерируемые `/docs`,
 `/redoc` и `/openapi.json`; production отключает docs/redoc.
@@ -946,7 +962,7 @@ readiness detail в unified error превращается в строковое
 
 На текущем состоянии:
 
-- **68 tests total**;
+- **70 tests total**;
 - **36 tests** находятся в `tests/integration`;
 - **32 tests** находятся вне integration directory;
 - полный `pytest` проходит;
@@ -1040,7 +1056,7 @@ readiness detail в unified error превращается в строковое
 - `scripts/race_test.py`: 100 HTTP download attempts against a running stack.
 - `scripts/expiration_test.py`: 5-second TTL demonstration.
 
-Это demo scripts, не часть 68 automated tests. `race_test.py` также сталкивается
+Это demo scripts, не часть 70 automated tests. `race_test.py` также сталкивается
 с HTTP rate limits и считает не все возможные rejection codes, поэтому
 автоматические PostgreSQL tests являются более надёжным доказательством
 concurrency invariant.
@@ -1109,11 +1125,11 @@ Collectors:
 
 Ограничения:
 
-- В Compose API, worker и beat разделяют `PROMETHEUS_MULTIPROC_DIR`, поэтому
-  collector API видит worker counters; stale files между deployments могут
-  сохранять cumulative counter values.
+- API использует обычный in-process registry. Celery worker и отдельный
+  `worker-metrics` разделяют private `PROMETHEUS_MULTIPROC_DIR`; entrypoint
+  очищает его до старта Celery. Этот volume не используется API или Beat.
 - Raw request path используется как label и создаёт high cardinality.
-- Нет Grafana dashboard/alert rules в репозитории.
+- Dashboard provisioned в Grafana; alert rules в репозитории пока нет.
 
 ### Health
 
@@ -1123,7 +1139,7 @@ Collectors:
 
 ## 22. Docker / deployment
 
-### Production Compose: 8 services
+### Production Compose: 14 services
 
 | Service | Назначение | External port |
 | --- | --- | --- |
@@ -1135,9 +1151,15 @@ Collectors:
 | minio | S3 + console внутри сети | Нет |
 | rabbitmq | Broker + management plugin внутри сети | Нет |
 | redis | Counters/locks | Нет |
+| worker-metrics | Private Celery multiprocess metrics endpoint | Нет |
+| postgres-exporter | PostgreSQL metrics для Prometheus | Нет |
+| redis-exporter | Redis metrics для Prometheus | Нет |
+| nginx-exporter | Nginx stub-status metrics для Prometheus | Нет |
+| prometheus | Time-series storage и public query UI через Nginx | Нет |
+| grafana | Public anonymous Viewer dashboard через Nginx | Нет |
 
-Persistent named volumes: PostgreSQL, MinIO, RabbitMQ, Redis и shared
-Prometheus multiprocess storage.
+Persistent named volumes: PostgreSQL, MinIO, RabbitMQ, Redis, private worker
+metrics, Prometheus TSDB и Grafana data.
 
 API healthcheck вызывает `/health/live`. PostgreSQL, RabbitMQ и Redis имеют
 healthchecks. MinIO только `service_started`, без Compose healthcheck.
@@ -1148,20 +1170,22 @@ Nginx:
 - `client_max_body_size 100M`;
 - 300-second body/proxy read timeout;
 - static SPA fallback;
-- `/api/` и `/health/` proxy;
-- `/metrics` не proxy;
+- `/api/`, `/health/` и `/metrics` proxy;
+- public `/prometheus/` и `/grafana/` reverse proxy;
 - server tokens off;
 - JSON access logs и security headers.
 
-API, worker и Beat получают `PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus` и
-разделяют named volume, чтобы `/metrics` агрегировал counters всех процессов.
+API отдаёт свой registry на `/metrics`. `worker-metrics` отдаёт private Celery
+multiprocess registry на internal `:8001/metrics`; Prometheus scrape-ит оба
+endpoints.
 
 ### Local Compose
 
-- те же 8 services;
+- те же 14 services;
 - из коробки работает без `.env`;
 - development-only credentials встроены;
 - frontend доступен на `http://localhost:4917`;
+- public showcase: `/stats`, `/metrics`, `/prometheus/`, `/grafana/`;
 - отдельные local volumes.
 
 ### Container startup
@@ -1396,18 +1420,18 @@ failures.
 ## 26. Numbers and facts for portfolio
 
 - **7** явно объявленных FastAPI endpoints.
-- **6** endpoints доступны через production Nginx.
-- **1** internal-only `/metrics`.
-- **3** frontend SPA routes/screens: `/`, `/d/{public_id}`, `/logs`.
+- **7** endpoints доступны через production Nginx.
+- **4** public observability routes: `/stats`, `/metrics`, `/prometheus/`, `/grafana/`.
+- **4** frontend SPA routes/screens: `/`, `/d/{public_id}`, `/logs`, `/stats`.
 - **4** PostgreSQL tables.
 - **5** Alembic revisions.
 - **3** database enums, всего **14** enum values.
 - **4** Celery tasks.
 - **2** Beat schedules: каждые **10 секунд** и **5 минут**.
-- **8** Docker Compose services.
-- **5** persistent infrastructure volumes.
-- **68** automated tests: **36 integration**, **32 non-integration**.
-- **68/68** tests проходят на текущем состоянии.
+- **14** Docker Compose services.
+- **7** persistent infrastructure volumes.
+- **70** automated tests: **36 integration**, **34 non-integration**.
+- **70/70** tests проходят на текущем состоянии.
 - **50** concurrent attempts → **1** success при limit=1.
 - **50** concurrent attempts → **5** success при limit=5.
 - **20** concurrent attempts → **20** success для unlimited Drop.

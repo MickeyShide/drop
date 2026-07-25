@@ -59,10 +59,19 @@ docker compose -f docker-compose.local.yml down
 Local peppers and passwords are development-only values and must not be reused
 in production.
 
+The local public showcase is available without authentication:
+
+- `http://localhost:4917/stats` — compact public statistics page;
+- `http://localhost:4917/grafana/` — provisioned Grafana dashboard;
+- `http://localhost:4917/prometheus/` — Prometheus UI and query API;
+- `http://localhost:4917/metrics` — raw Prometheus exposition format.
+
 ## Production deployment
 
 Only Nginx is published by the production Compose file. PostgreSQL, Redis,
-RabbitMQ, MinIO and the FastAPI port remain on the internal Docker network.
+RabbitMQ, MinIO, exporters and the FastAPI port remain on the internal Docker
+network. Nginx publicly proxies the showcase endpoints `/stats`, `/metrics`,
+`/prometheus/` and `/grafana/`; Grafana is intentionally anonymous Viewer-only.
 Production deployment is performed by GitHub Actions. Before SSH deployment,
 the workflow validates every required GitHub Variable and Secret and fails if
 even one is empty. It then writes a protected `.env` on the target host and
@@ -75,6 +84,7 @@ Required GitHub Variables:
 - `SERVER_PORT`
 - `TARGET_DIR`
 - `NGINX_PORT`
+- `PUBLIC_BASE_URL` — full externally reachable URL, for example `https://drop.example.com`
 
 Required GitHub Secrets:
 
@@ -84,11 +94,17 @@ Required GitHub Secrets:
 - `POSTGRES_PASSWORD`
 - `RABBITMQ_PASSWORD`
 - `MINIO_PASSWORD`
+- `GRAFANA_ADMIN_PASSWORD`
 
 Use URL-safe passwords containing only letters, digits, `-` or `_`. The
 Compose file derives the PostgreSQL, RabbitMQ and S3 application credentials
 from these three passwords, so duplicate URL and access-key variables are not
 needed.
+
+`GRAFANA_ADMIN_PASSWORD` protects the private Grafana administrator account.
+It does not affect the public showcase dashboard, which is visible without a
+login. Since Prometheus and Grafana are intentionally public in this project,
+do not put secrets, personal data or sensitive labels into application metrics.
 
 Use a real secret manager for production rather than shell history. MinIO
 must remain private and should not be exposed directly to the Internet.

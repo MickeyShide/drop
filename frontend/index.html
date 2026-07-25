@@ -461,6 +461,9 @@
     </a>
     <div class="header-actions">
       <a class="nav-btn" href="/logs">Логи</a>
+      <a class="nav-btn" href="/stats">Статистика</a>
+      <a class="nav-btn" href="/grafana/d/drop-showcase" target="_blank" rel="noopener">Grafana</a>
+      <a class="nav-btn" href="/prometheus/graph" target="_blank" rel="noopener">Prometheus</a>
       <button class="nav-btn" onclick="openAboutModal()">О проекте</button>
       <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">☀️</button>
     </div>
@@ -678,6 +681,31 @@
         <button class="btn-secondary" onclick="showUploadScreen()">На главную</button>
       </div>
 
+      <!-- SCREEN 8: PUBLIC OBSERVABILITY SHOWCASE -->
+      <div id="screenStats" class="hidden">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px;">
+          <div>
+            <h1 style="font-size: 1.5rem;">Публичная статистика</h1>
+            <p class="subtitle" style="margin-bottom: 0;">Данные Prometheus обновляются каждые 15 секунд.</p>
+          </div>
+          <button class="btn-secondary" style="width: auto; margin-top: 0; padding: 8px 16px;" onclick="loadShowcaseStats()">🔄 Обновить</button>
+        </div>
+
+        <div class="badge-info" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+          <div><span style="color: var(--text-muted);">Загрузок</span><strong id="statsUploads" style="display: block; font-size: 1.7rem;">—</strong></div>
+          <div><span style="color: var(--text-muted);">Скачиваний</span><strong id="statsDownloads" style="display: block; font-size: 1.7rem;">—</strong></div>
+          <div><span style="color: var(--text-muted);">Запросов / мин.</span><strong id="statsRequests" style="display: block; font-size: 1.7rem;">—</strong></div>
+          <div><span style="color: var(--text-muted);">Здоровых сервисов</span><strong id="statsTargets" style="display: block; font-size: 1.7rem;">—</strong></div>
+        </div>
+
+        <p id="statsUpdatedAt" class="subtitle" style="font-size: 0.85rem; margin-top: 16px;"></p>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+          <a class="btn-primary" style="width: auto; margin-top: 0; padding: 10px 16px; text-decoration: none;" href="/grafana/d/drop-showcase" target="_blank" rel="noopener">Открыть Grafana</a>
+          <a class="btn-secondary" style="width: auto; margin-top: 0; padding: 10px 16px; text-decoration: none;" href="/prometheus/graph" target="_blank" rel="noopener">Prometheus query</a>
+          <a class="btn-secondary" style="width: auto; margin-top: 0; padding: 10px 16px; text-decoration: none;" href="/metrics" target="_blank" rel="noopener">Raw /metrics</a>
+        </div>
+      </div>
+
     </div>
   </main>
 
@@ -757,7 +785,7 @@
       const mainContainer = document.getElementById('mainContainer');
       mainContainer.classList.remove('container-large');
 
-      const screens = ['screenUpload', 'screenSuccess', 'screenDownload', 'screenConsumed', 'screenExpired', 'screenNotFound', 'screenLogs'];
+      const screens = ['screenUpload', 'screenSuccess', 'screenDownload', 'screenConsumed', 'screenExpired', 'screenNotFound', 'screenLogs', 'screenStats'];
       screens.forEach(s => document.getElementById(s).classList.add('hidden'));
     }
 
@@ -773,6 +801,12 @@
       document.getElementById('mainContainer').classList.add('container-large');
       document.getElementById('screenLogs').classList.remove('hidden');
       fetchLogsData();
+    }
+
+    function showStatsScreen() {
+      hideAllScreens();
+      document.getElementById('screenStats').classList.remove('hidden');
+      loadShowcaseStats();
     }
 
     function uploadFile() {
@@ -854,6 +888,10 @@
       const path = window.location.pathname;
       if (path === '/logs') {
         showLogsScreen();
+        return;
+      }
+      if (path === '/stats') {
+        showStatsScreen();
         return;
       }
 
@@ -954,6 +992,41 @@
     }
 
     /* LOGS DASHBOARD LOGIC */
+    async function queryPrometheus(expression) {
+      const res = await fetch('/prometheus/api/v1/query?query=' + encodeURIComponent(expression));
+      if (!res.ok) throw new Error('Prometheus is unavailable');
+      const payload = await res.json();
+      const values = payload?.data?.result || [];
+      return values.reduce((sum, item) => sum + Number(item.value?.[1] || 0), 0);
+    }
+
+    function formatMetric(value, decimals = 0) {
+      return new Intl.NumberFormat('ru-RU', {
+        maximumFractionDigits: decimals,
+        minimumFractionDigits: decimals,
+      }).format(value);
+    }
+
+    async function loadShowcaseStats() {
+      const updatedAt = document.getElementById('statsUpdatedAt');
+      updatedAt.innerText = 'Загрузка данных из Prometheus…';
+      try {
+        const [uploads, downloads, requests, targets] = await Promise.all([
+          queryPrometheus('sum(drop_uploads_total{status="success"})'),
+          queryPrometheus('sum(drop_downloads_total)'),
+          queryPrometheus('sum(rate(http_requests_total[1m])) * 60'),
+          queryPrometheus('sum(up)'),
+        ]);
+        document.getElementById('statsUploads').innerText = formatMetric(uploads);
+        document.getElementById('statsDownloads').innerText = formatMetric(downloads);
+        document.getElementById('statsRequests').innerText = formatMetric(requests, 1);
+        document.getElementById('statsTargets').innerText = formatMetric(targets);
+        updatedAt.innerText = 'Обновлено: ' + new Date().toLocaleTimeString();
+      } catch (err) {
+        updatedAt.innerText = 'Prometheus ещё запускается или временно недоступен.';
+      }
+    }
+
     async function fetchLogsData() {
       try {
         const res = await fetch('/api/v1/drops/logs/data');

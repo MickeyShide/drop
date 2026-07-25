@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: Drop showcase
+    orgId: 1
+    folder: Drop
+    type: file
+    disableDeletion: true
+    editable: false
+    options:
+      path: /var/lib/grafana/dashboards

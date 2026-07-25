@@ -1,0 +1,85 @@
+{
+  "annotations": { "list": [] },
+  "editable": false,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    { "title": "Raw metrics", "url": "/metrics", "targetBlank": true },
+    { "title": "Prometheus", "url": "/prometheus/graph", "targetBlank": true }
+  ],
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Uploads",
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 0 },
+      "targets": [{ "expr": "sum(drop_uploads_total{status=\"success\"})", "refId": "A" }],
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto" }
+    },
+    {
+      "type": "stat",
+      "title": "Downloads",
+      "gridPos": { "h": 8, "w": 6, "x": 6, "y": 0 },
+      "targets": [{ "expr": "sum(drop_downloads_total)", "refId": "A" }],
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto" }
+    },
+    {
+      "type": "stat",
+      "title": "HTTP requests / min",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 0 },
+      "targets": [{ "expr": "sum(rate(http_requests_total[1m])) * 60", "refId": "A" }],
+      "fieldConfig": { "defaults": { "decimals": 1, "color": { "mode": "palette-classic" } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto" }
+    },
+    {
+      "type": "stat",
+      "title": "Healthy targets",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 0 },
+      "targets": [{ "expr": "sum(up)", "refId": "A" }],
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto" }
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP request rate",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 8 },
+      "targets": [{ "expr": "sum by (status_code) (rate(http_requests_total[1m]))", "legendFormat": "{{status_code}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "reqps", "color": { "mode": "palette-classic" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "p95 API latency",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 8 },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "s", "color": { "mode": "palette-classic" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "hidden" }, "tooltip": { "mode": "single" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Celery failures",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 17 },
+      "targets": [{ "expr": "sum by (task_name) (increase(celery_task_failures_total[5m]))", "legendFormat": "{{task_name}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "palette-classic" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Infrastructure targets",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 17 },
+      "targets": [{ "expr": "up{job=~\"postgres|redis|rabbitmq|minio|nginx|drop_api\"}", "legendFormat": "{{job}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "min": 0, "max": 1, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    }
+  ],
+  "refresh": "15s",
+  "schemaVersion": 41,
+  "tags": ["drop", "showcase"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timezone": "browser",
+  "title": "Drop — Public Showcase",
+  "uid": "drop-showcase",
+  "version": 1
+}

@@ -95,15 +95,17 @@ jobs:
           SERVER_PORT: ${{ vars.SERVER_PORT }}
           TARGET_DIR: ${{ vars.TARGET_DIR }}
           NGINX_PORT: ${{ vars.NGINX_PORT }}
+          PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL }}
           SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
           DROP_TOKEN_PEPPER: ${{ secrets.DROP_TOKEN_PEPPER }}
           SESSION_PEPPER: ${{ secrets.SESSION_PEPPER }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
           MINIO_PASSWORD: ${{ secrets.MINIO_PASSWORD }}
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
         run: |
           set -eu
-          for name in SERVER_HOST SERVER_USER SERVER_PORT TARGET_DIR NGINX_PORT SERVER_SSH_KEY DROP_TOKEN_PEPPER SESSION_PEPPER POSTGRES_PASSWORD RABBITMQ_PASSWORD MINIO_PASSWORD; do
+          for name in SERVER_HOST SERVER_USER SERVER_PORT TARGET_DIR NGINX_PORT PUBLIC_BASE_URL SERVER_SSH_KEY DROP_TOKEN_PEPPER SESSION_PEPPER POSTGRES_PASSWORD RABBITMQ_PASSWORD MINIO_PASSWORD GRAFANA_ADMIN_PASSWORD; do
             if [ -z "${!name:-}" ]; then
               echo "::error::Required GitHub variable or secret is missing: $name"
               exit 1
@@ -114,17 +116,19 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         env:
           NGINX_PORT: ${{ vars.NGINX_PORT }}
+          PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL }}
           DROP_TOKEN_PEPPER: ${{ secrets.DROP_TOKEN_PEPPER }}
           SESSION_PEPPER: ${{ secrets.SESSION_PEPPER }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
           MINIO_PASSWORD: ${{ secrets.MINIO_PASSWORD }}
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
         with:
           host: ${{ vars.SERVER_HOST }}
           username: ${{ vars.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ vars.SERVER_PORT }}
-          envs: NGINX_PORT,DROP_TOKEN_PEPPER,SESSION_PEPPER,POSTGRES_PASSWORD,RABBITMQ_PASSWORD,MINIO_PASSWORD
+          envs: NGINX_PORT,PUBLIC_BASE_URL,DROP_TOKEN_PEPPER,SESSION_PEPPER,POSTGRES_PASSWORD,RABBITMQ_PASSWORD,MINIO_PASSWORD,GRAFANA_ADMIN_PASSWORD
           script: |
             set -e
             TARGET_DIR="${{ vars.TARGET_DIR }}"
@@ -143,11 +147,13 @@ jobs:
             umask 077
             cat > .env <<EOF
             NGINX_PORT=$NGINX_PORT
+            PUBLIC_BASE_URL=$PUBLIC_BASE_URL
             DROP_TOKEN_PEPPER=$DROP_TOKEN_PEPPER
             SESSION_PEPPER=$SESSION_PEPPER
             POSTGRES_PASSWORD=$POSTGRES_PASSWORD
             RABBITMQ_PASSWORD=$RABBITMQ_PASSWORD
             MINIO_PASSWORD=$MINIO_PASSWORD
+            GRAFANA_ADMIN_PASSWORD=$GRAFANA_ADMIN_PASSWORD
             EOF
 
             echo "3. Rebuilding Docker Compose containers..."
