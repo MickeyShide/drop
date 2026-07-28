@@ -44,8 +44,10 @@
       background-color: var(--bg);
       color: var(--text-main);
       min-height: 100vh;
+      min-height: 100dvh;
       display: flex;
       flex-direction: column;
+      overflow-x: hidden;
     }
 
     header {
@@ -54,7 +56,7 @@
       width: 100%;
       padding: 24px 20px;
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-start;
       align-items: center;
     }
 
@@ -79,9 +81,13 @@
       display: flex;
       align-items: center;
       gap: 12px;
+      margin-left: auto;
     }
 
     .nav-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       background: none;
       border: none;
       color: var(--text-muted);
@@ -90,6 +96,8 @@
       cursor: pointer;
       padding: 8px 12px;
       border-radius: 8px;
+      text-decoration: none;
+      white-space: nowrap;
     }
 
     .nav-btn:hover {
@@ -108,6 +116,8 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
+      flex: 0 0 auto;
+      margin-left: 12px;
     }
 
     main {
@@ -369,6 +379,7 @@
 
     .table-container {
       overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
     table.data-table {
@@ -425,6 +436,8 @@
       width: 100%;
       padding: 28px;
       text-align: left;
+      max-height: calc(100dvh - 40px);
+      overflow-y: auto;
     }
 
     .modal-header {
@@ -440,16 +453,403 @@
       font-size: 1.5rem;
       color: var(--text-muted);
       cursor: pointer;
+      width: 44px;
+      height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
     }
 
     footer {
       text-align: center;
-      padding: 20px;
+      padding: 20px max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
       font-size: 0.85rem;
       color: var(--text-muted);
     }
 
+    .section-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .section-heading h1 {
+      font-size: 1.5rem;
+    }
+
+    .section-heading .subtitle {
+      margin-bottom: 0;
+    }
+
+    .refresh-btn {
+      width: auto;
+      margin-top: 0;
+      padding: 8px 16px;
+      flex: 0 0 auto;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .stat-card {
+      min-width: 0;
+    }
+
+    .stat-card span {
+      color: var(--text-muted);
+    }
+
+    .stat-card strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 1.7rem;
+      overflow-wrap: anywhere;
+    }
+
+    .stats-updated {
+      font-size: 0.85rem;
+      margin-top: 16px;
+    }
+
+    .stats-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .stats-actions .btn-primary,
+    .stats-actions .btn-secondary {
+      width: auto;
+      min-height: 44px;
+      margin-top: 0;
+      padding: 10px 16px;
+      text-decoration: none;
+    }
+
     .hidden { display: none !important; }
+
+    @media (max-width: 720px) {
+      header {
+        position: relative;
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: max(14px, env(safe-area-inset-top)) 16px 10px;
+      }
+
+      .logo {
+        min-height: 42px;
+        padding-right: 52px;
+      }
+
+      .header-actions {
+        width: 100%;
+        gap: 6px;
+        margin-left: 0;
+        overflow-x: auto;
+        padding: 2px 0 6px;
+        scroll-snap-type: x proximity;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .header-actions::-webkit-scrollbar {
+        display: none;
+      }
+
+      .nav-btn {
+        flex: 0 0 auto;
+        min-height: 38px;
+        padding: 8px 12px;
+        border: 1px solid var(--border);
+        background: var(--card-bg);
+        font-size: 0.84rem;
+        scroll-snap-align: start;
+      }
+
+      .theme-toggle {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        width: 40px;
+        height: 40px;
+        margin-left: 0;
+      }
+
+      main {
+        align-items: flex-start;
+        padding: 8px 12px 24px;
+      }
+
+      .container,
+      .container-large {
+        min-width: 0;
+        max-width: 100%;
+        padding: 26px 20px;
+        border-radius: 20px;
+      }
+
+      h1 {
+        font-size: clamp(1.4rem, 7vw, 1.7rem);
+        line-height: 1.2;
+        overflow-wrap: anywhere;
+      }
+
+      p.subtitle {
+        margin-bottom: 22px;
+        font-size: 0.92rem;
+      }
+
+      .dropzone {
+        min-height: 178px;
+        padding: 28px 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .form-group {
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .select-wrapper {
+        min-width: 0;
+      }
+
+      #selectedFileName,
+      #downloadFileName,
+      #createdFileName {
+        max-width: 100%;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      select,
+      .link-input,
+      .btn-primary,
+      .btn-secondary,
+      .copy-btn {
+        min-height: 48px;
+        font-size: 1rem;
+      }
+
+      .link-box {
+        flex-direction: column;
+      }
+
+      .link-input {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .copy-btn {
+        width: 100%;
+      }
+
+      .badge-row {
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      .badge-row strong {
+        min-width: 0;
+        max-width: 60%;
+        text-align: right;
+        overflow-wrap: anywhere;
+      }
+
+      .section-heading {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .refresh-btn {
+        width: 100%;
+        min-height: 44px;
+      }
+
+      .tab-bar {
+        gap: 6px;
+        margin: 0 -4px 16px;
+        padding: 0 4px 8px;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .tab-bar::-webkit-scrollbar {
+        display: none;
+      }
+
+      .tab-btn {
+        flex: 0 0 auto;
+        min-height: 42px;
+        padding: 8px 12px;
+        border: 1px solid var(--border);
+        font-size: 0.82rem;
+        white-space: nowrap;
+        scroll-snap-align: start;
+      }
+
+      .table-container {
+        overflow: visible;
+      }
+
+      table.data-table,
+      table.data-table tbody,
+      table.data-table tr,
+      table.data-table td {
+        display: block;
+        width: 100%;
+      }
+
+      table.data-table thead {
+        display: none;
+      }
+
+      table.data-table tbody {
+        display: grid;
+        gap: 12px;
+      }
+
+      table.data-table tr {
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: var(--bg);
+      }
+
+      table.data-table td {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border);
+        white-space: normal;
+        overflow-wrap: anywhere;
+        text-align: right;
+      }
+
+      table.data-table td:last-child {
+        border-bottom: 0;
+      }
+
+      table.data-table td::before {
+        content: attr(data-label);
+        flex: 0 0 40%;
+        color: var(--text-muted);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-align: left;
+        text-transform: uppercase;
+      }
+
+      table.data-table td[colspan] {
+        display: block;
+        padding: 18px 4px;
+        border: 0;
+        text-align: center !important;
+      }
+
+      table.data-table td[colspan]::before {
+        display: none;
+      }
+
+      table.data-table code {
+        max-width: 58%;
+        overflow-wrap: anywhere;
+        white-space: normal;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: 12px;
+      }
+
+      .stat-card {
+        padding: 12px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--card-bg);
+      }
+
+      .stat-card strong {
+        font-size: 1.5rem;
+      }
+
+      .stats-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+
+      .stats-actions .btn-primary,
+      .stats-actions .btn-secondary {
+        width: 100%;
+      }
+
+      .modal {
+        align-items: flex-end;
+        padding: 0;
+      }
+
+      .modal-content {
+        max-width: none;
+        max-height: min(85dvh, 720px);
+        padding: 24px 20px max(24px, env(safe-area-inset-bottom));
+        border-radius: 22px 22px 0 0;
+      }
+
+      footer {
+        padding-top: 12px;
+        font-size: 0.78rem;
+      }
+    }
+
+    @media (max-width: 440px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 360px) {
+      header {
+        padding-inline: 12px;
+      }
+
+      .theme-toggle {
+        right: 12px;
+      }
+
+      main {
+        padding-inline: 8px;
+      }
+
+      .container,
+      .container-large {
+        padding: 22px 16px;
+      }
+
+      .badge-row {
+        flex-direction: column;
+        gap: 3px;
+      }
+
+      .badge-row strong {
+        max-width: 100%;
+        text-align: left;
+      }
+    }
   </style>
 </head>
 <body>
@@ -465,8 +865,8 @@
       <a class="nav-btn" href="/grafana/d/drop-showcase" target="_blank" rel="noopener">Grafana</a>
       <a class="nav-btn" href="/prometheus/graph" target="_blank" rel="noopener">Prometheus</a>
       <button class="nav-btn" onclick="openAboutModal()">О проекте</button>
-      <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">☀️</button>
     </div>
+    <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" aria-label="Переключить тему">☀️</button>
   </header>
 
   <main>
@@ -607,12 +1007,12 @@
 
       <!-- SCREEN 7: LOGS DASHBOARD -->
       <div id="screenLogs" class="hidden">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div class="section-heading">
           <div>
             <h1 style="font-size: 1.5rem;">Панель логов и мониторинга</h1>
             <p class="subtitle" style="margin-bottom: 0;">Отслеживание запросов, скачиваний и фоновых задач Celery</p>
           </div>
-          <button class="btn-secondary" style="width: auto; margin-top: 0; padding: 8px 16px;" onclick="fetchLogsData()">🔄 Обновить</button>
+          <button class="btn-secondary refresh-btn" onclick="fetchLogsData()">🔄 Обновить</button>
         </div>
 
         <div class="tab-bar">
@@ -683,26 +1083,26 @@
 
       <!-- SCREEN 8: PUBLIC OBSERVABILITY SHOWCASE -->
       <div id="screenStats" class="hidden">
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px;">
+        <div class="section-heading">
           <div>
             <h1 style="font-size: 1.5rem;">Публичная статистика</h1>
             <p class="subtitle" style="margin-bottom: 0;">Данные Prometheus обновляются каждые 15 секунд.</p>
           </div>
-          <button class="btn-secondary" style="width: auto; margin-top: 0; padding: 8px 16px;" onclick="loadShowcaseStats()">🔄 Обновить</button>
+          <button class="btn-secondary refresh-btn" onclick="loadShowcaseStats()">🔄 Обновить</button>
         </div>
 
-        <div class="badge-info" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
-          <div><span style="color: var(--text-muted);">Загрузок</span><strong id="statsUploads" style="display: block; font-size: 1.7rem;">—</strong></div>
-          <div><span style="color: var(--text-muted);">Скачиваний</span><strong id="statsDownloads" style="display: block; font-size: 1.7rem;">—</strong></div>
-          <div><span style="color: var(--text-muted);">Запросов / мин.</span><strong id="statsRequests" style="display: block; font-size: 1.7rem;">—</strong></div>
-          <div><span style="color: var(--text-muted);">Здоровых сервисов</span><strong id="statsTargets" style="display: block; font-size: 1.7rem;">—</strong></div>
+        <div class="badge-info stats-grid">
+          <div class="stat-card"><span>Загрузок</span><strong id="statsUploads">—</strong></div>
+          <div class="stat-card"><span>Скачиваний</span><strong id="statsDownloads">—</strong></div>
+          <div class="stat-card"><span>Запросов / мин.</span><strong id="statsRequests">—</strong></div>
+          <div class="stat-card"><span>Здоровых сервисов</span><strong id="statsTargets">—</strong></div>
         </div>
 
-        <p id="statsUpdatedAt" class="subtitle" style="font-size: 0.85rem; margin-top: 16px;"></p>
-        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-          <a class="btn-primary" style="width: auto; margin-top: 0; padding: 10px 16px; text-decoration: none;" href="/grafana/d/drop-showcase" target="_blank" rel="noopener">Открыть Grafana</a>
-          <a class="btn-secondary" style="width: auto; margin-top: 0; padding: 10px 16px; text-decoration: none;" href="/prometheus/graph" target="_blank" rel="noopener">Prometheus query</a>
-          <a class="btn-secondary" style="width: auto; margin-top: 0; padding: 10px 16px; text-decoration: none;" href="/metrics" target="_blank" rel="noopener">Raw /metrics</a>
+        <p id="statsUpdatedAt" class="subtitle stats-updated"></p>
+        <div class="stats-actions">
+          <a class="btn-primary" href="/grafana/d/drop-showcase" target="_blank" rel="noopener">Открыть Grafana</a>
+          <a class="btn-secondary" href="/prometheus/graph" target="_blank" rel="noopener">Prometheus query</a>
+          <a class="btn-secondary" href="/metrics" target="_blank" rel="noopener">Raw /metrics</a>
         </div>
       </div>
 
@@ -1050,12 +1450,12 @@
 
       tbody.innerHTML = events.map(e => `
         <tr>
-          <td><code style="font-size: 0.8rem; background: var(--bg); padding: 2px 6px; border-radius: 4px;">${e.request_id || 'N/A'}</code></td>
-          <td><strong>${escapeHtml(e.filename)}</strong></td>
-          <td>${e.ip_address || '127.0.0.1'}</td>
-          <td><span class="pill pill-pending">${e.download_number} из ${e.max_downloads || '∞'}</span></td>
-          <td><strong>${e.duration_ms !== null ? e.duration_ms + ' ms' : '-'}</strong></td>
-          <td style="color: var(--text-muted);">${new Date(e.created_at).toLocaleString()}</td>
+          <td data-label="Request ID"><code style="font-size: 0.8rem; background: var(--bg); padding: 2px 6px; border-radius: 4px;">${e.request_id || 'N/A'}</code></td>
+          <td data-label="Файл"><strong>${escapeHtml(e.filename)}</strong></td>
+          <td data-label="IP клиента">${e.ip_address || '127.0.0.1'}</td>
+          <td data-label="Скачивание"><span class="pill pill-pending">${e.download_number} из ${e.max_downloads || '∞'}</span></td>
+          <td data-label="Время"><strong>${e.duration_ms !== null ? e.duration_ms + ' ms' : '-'}</strong></td>
+          <td data-label="Дата" style="color: var(--text-muted);">${new Date(e.created_at).toLocaleString()}</td>
         </tr>
       `).join('');
     }
@@ -1074,12 +1474,12 @@
 
         return `
           <tr>
-            <td><code>${d.public_id}</code></td>
-            <td><strong>${escapeHtml(d.original_filename)}</strong></td>
-            <td>${formatBytes(d.size_bytes)}</td>
-            <td>${d.download_count} / ${d.max_downloads || '∞'}</td>
-            <td style="color: var(--text-muted);">${new Date(d.expires_at).toLocaleString()}</td>
-            <td><span class="pill ${pillClass}">${d.status}</span></td>
+            <td data-label="ID"><code>${d.public_id}</code></td>
+            <td data-label="Имя файла"><strong>${escapeHtml(d.original_filename)}</strong></td>
+            <td data-label="Размер">${formatBytes(d.size_bytes)}</td>
+            <td data-label="Скачивания">${d.download_count} / ${d.max_downloads || '∞'}</td>
+            <td data-label="Срок действия" style="color: var(--text-muted);">${new Date(d.expires_at).toLocaleString()}</td>
+            <td data-label="Статус"><span class="pill ${pillClass}">${d.status}</span></td>
           </tr>
         `;
       }).join('');
@@ -1096,12 +1496,12 @@
         let pillClass = t.status === 'PROCESSED' ? 'pill-active' : 'pill-pending';
         return `
           <tr>
-            <td><code style="font-size: 0.75rem;">${t.id.substring(0, 8)}...</code></td>
-            <td><strong>${t.event_type}</strong></td>
-            <td><code style="font-size: 0.75rem;">${JSON.stringify(t.payload)}</code></td>
-            <td><span class="pill ${pillClass}">${t.status}</span></td>
-            <td style="color: var(--text-muted);">${new Date(t.created_at).toLocaleString()}</td>
-            <td style="color: var(--text-muted);">${t.processed_at ? new Date(t.processed_at).toLocaleString() : '-'}</td>
+            <td data-label="ID задачи"><code style="font-size: 0.75rem;">${t.id.substring(0, 8)}...</code></td>
+            <td data-label="Событие"><strong>${t.event_type}</strong></td>
+            <td data-label="Payload"><code style="font-size: 0.75rem;">${JSON.stringify(t.payload)}</code></td>
+            <td data-label="Статус"><span class="pill ${pillClass}">${t.status}</span></td>
+            <td data-label="Создано" style="color: var(--text-muted);">${new Date(t.created_at).toLocaleString()}</td>
+            <td data-label="Обработано" style="color: var(--text-muted);">${t.processed_at ? new Date(t.processed_at).toLocaleString() : '-'}</td>
           </tr>
         `;
       }).join('');

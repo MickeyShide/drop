@@ -912,8 +912,8 @@ Nginx SPA fallback обслуживает `/`, `/d/{public_id}`, `/logs` и `/st
 не отдельные FastAPI routes. `/stats` запрашивает публичный Prometheus HTTP API
 и показывает короткую витрину ключевых counters.
 
-В non-production FastAPI также включает автоматически генерируемые `/docs`,
-`/redoc` и `/openapi.json`; production отключает docs/redoc.
+Автоматически генерируемые `/docs`, `/redoc` и `/openapi.json` включены во всех
+окружениях и публично proxy-ятся production Nginx как часть showcase.
 
 ## 18. Error model
 

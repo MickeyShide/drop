@@ -18,8 +18,8 @@ def create_app() -> FastAPI:
         description="Ephemeral secure file sharing microservice with atomic limits and automatic cleanup.",
         version="0.1.0",
         debug=settings.debug,
-        docs_url=None if settings.app_env == "production" else "/docs",
-        redoc_url=None if settings.app_env == "production" else "/redoc",
+        docs_url="/docs",
+        redoc_url="/redoc",
     )
 
     app.add_middleware(SecurityHeadersMiddleware)
