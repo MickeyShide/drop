@@ -159,5 +159,8 @@ jobs:
             echo "3. Rebuilding Docker Compose containers..."
             docker compose up -d --build --remove-orphans
 
-            echo "4. Verifying container health..."
+            echo "4. Restarting nginx to pick up config/frontend changes..."
+            docker compose up -d --force-recreate --no-deps nginx
+
+            echo "5. Verifying container health..."
             docker compose ps

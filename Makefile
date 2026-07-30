@@ -1,10 +1,14 @@
-.PHONY: up down test race-test expiration-test lint typecheck clean observability-up observability-down
+.PHONY: up down deploy test race-test expiration-test lint typecheck clean observability-up observability-down
 
 up:
 	docker compose up -d --build
 
 down:
 	docker compose down
+
+deploy:
+	docker compose up -d --build
+	docker compose up -d --force-recreate --no-deps nginx
 
 observability-up:
 	docker network create shide-observability || true
