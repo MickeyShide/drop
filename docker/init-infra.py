@@ -6,7 +6,7 @@ import asyncio
 import os
 import sys
 import time
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 import asyncpg
 import boto3
@@ -77,7 +77,15 @@ async def ensure_database() -> None:
 @retry("Waiting for RabbitMQ management API")
 def ensure_rabbitmq_vhost() -> None:
     url = urlparse(os.environ["RABBITMQ_URL"])
-    vhost = url.path.lstrip("/") or "/"
+    path = url.path
+    if path.startswith("//"):
+        vhost = path[1:]
+    elif path.startswith("/"):
+        vhost = path[1:]
+    else:
+        vhost = path
+    vhost = vhost or "/"
+
     user = url.username or "guest"
     password = url.password or "guest"
     host = url.hostname or "localhost"
@@ -85,15 +93,15 @@ def ensure_rabbitmq_vhost() -> None:
 
     auth = httpx.BasicAuth(user, password)
     base = f"http://{host}:{port}/api"
+    encoded_vhost = quote(vhost, safe="")
 
     with httpx.Client(timeout=10.0) as client:
-        resp = client.get(f"{base}/vhosts/{vhost}", auth=auth)
+        resp = client.get(f"{base}/vhosts/{encoded_vhost}", auth=auth)
         if resp.status_code == 200:
             print(f"RabbitMQ vhost '{vhost}' already exists")
             return
         if resp.status_code not in {404, 401}:
             resp.raise_for_status()
-        encoded_vhost = vhost.replace("/", "%2F")
         resp = client.put(f"{base}/vhosts/{encoded_vhost}", auth=auth)
         resp.raise_for_status()
         print(f"RabbitMQ vhost '{vhost}' created")
