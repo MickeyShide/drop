@@ -11,10 +11,6 @@ services:
     depends_on:
       api:
         condition: service_healthy
-      prometheus:
-        condition: service_started
-      grafana:
-        condition: service_started
 
   api:
     build:
@@ -252,35 +248,8 @@ services:
       nginx:
         condition: service_started
 
-  prometheus:
-    image: prom/prometheus:v3.5.0
-    command:
-      - --config.file=/etc/prometheus/prometheus.yml
-      - --storage.tsdb.path=/prometheus
-      - --web.external-url=http://localhost:4917/prometheus/
-      - --web.route-prefix=/prometheus
-    volumes:
-      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_local_data:/prometheus
-
-  grafana:
-    image: grafana/grafana:12.1.1
-    environment:
-      GF_AUTH_ANONYMOUS_ENABLED: "true"
-      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
-      GF_AUTH_ANONYMOUS_HIDE_VERSION: "true"
-      GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_SECURITY_ADMIN_USER: drop-admin
-      GF_SECURITY_ADMIN_PASSWORD: local-grafana-admin-password
-      GF_SERVER_ROOT_URL: http://localhost:4917/grafana/
-      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
-    volumes:
-      - grafana_local_data:/var/lib/grafana
-      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
-    depends_on:
-      prometheus:
-        condition: service_started
+networks:
+  default:
 
 volumes:
   postgres_local_data:
@@ -288,5 +257,3 @@ volumes:
   rabbitmq_local_data:
   redis_local_data:
   worker_metrics_local_data:
-  prometheus_local_data:
-  grafana_local_data:
