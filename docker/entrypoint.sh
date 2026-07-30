@@ -5,6 +5,8 @@ CMD="$1"
 
 case "$CMD" in
   api)
+    echo "Ensuring shared infrastructure resources..."
+    python /app/docker/init-infra.py
     echo "Running database migrations (alembic upgrade head)..."
     alembic upgrade head
     echo "Starting FastAPI application server..."

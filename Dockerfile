@@ -18,6 +18,7 @@ RUN uv sync --frozen --no-dev
 COPY migrations ./migrations
 COPY alembic.ini ./alembic.ini
 COPY docker/entrypoint.sh ./docker/entrypoint.sh
+COPY docker/init-infra.py ./docker/init-infra.py
 
 RUN sed -i 's/\r$//' ./docker/entrypoint.sh && chmod +x ./docker/entrypoint.sh
 

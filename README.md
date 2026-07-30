@@ -1,7 +1,8 @@
 # Drop — anonymous ephemeral file sharing
 
-Drop is an anonymous file-sharing service built with FastAPI, PostgreSQL,
-Redis, Celery/RabbitMQ, MinIO and Nginx.
+Drop is an anonymous file-sharing service built with FastAPI. It uses the
+shared `shide-observability` infrastructure stack for PostgreSQL, Redis,
+RabbitMQ, MinIO, Prometheus, Grafana and Loki.
 
 ## Security model
 
@@ -43,8 +44,8 @@ fails closed on security-sensitive operations.
 ## Launch
 
 Drop uses a single Compose file and relies on the shared `shide-observability`
-stack for Prometheus, Grafana, Loki and Promtail. Start the observability stack
-first:
+stack for PostgreSQL, Redis, RabbitMQ, MinIO, Prometheus, Grafana and Loki.
+Start the observability stack first:
 
 ```powershell
 make observability-up
@@ -79,15 +80,14 @@ in production.
 
 The observability stack is available without authentication:
 
-- `http://localhost:3000` — Grafana with the Drop dashboard;
+- `https://grafana.shide.world` — Grafana with the Drop dashboard;
 - Drop logs are shipped to Loki and searchable in Grafana.
 
 ## Production deployment
 
-Only Nginx is published by the Compose file. PostgreSQL, Redis, RabbitMQ, MinIO,
-exporters and the FastAPI port remain on the internal Docker network. Nginx
-publicly proxies the showcase endpoint `/stats`; observability is provided by
-the separate `shide-observability` stack.
+Only Nginx is published by the Compose file. The API, workers, PostgreSQL,
+Redis, RabbitMQ, MinIO and observability remain on the internal Docker network.
+Nginx publicly proxies the showcase endpoint `/stats`.
 Production deployment is performed by GitHub Actions. Before SSH deployment,
 the workflow validates every required GitHub Variable and Secret and fails if
 even one is empty. It then writes a protected `.env` on the target host and
@@ -100,7 +100,9 @@ Required GitHub Variables:
 - `SERVER_PORT`
 - `TARGET_DIR`
 - `NGINX_PORT`
-- `PUBLIC_BASE_URL` — full externally reachable URL, for example `https://drop.example.com`
+- `INFRA_USER` — shared infrastructure username (default: `shide`)
+- `MINIO_ROOT_USER` — shared MinIO root user (default: `shide`)
+- `DROP_REDIS_DB` — Redis DB index for Drop (default: `0`)
 
 Required GitHub Secrets:
 
@@ -109,12 +111,11 @@ Required GitHub Secrets:
 - `SESSION_PEPPER`
 - `POSTGRES_PASSWORD`
 - `RABBITMQ_PASSWORD`
-- `MINIO_PASSWORD`
+- `MINIO_ROOT_PASSWORD`
 
 Use URL-safe passwords containing only letters, digits, `-` or `_`. The
-Compose file derives the PostgreSQL, RabbitMQ and S3 application credentials
-from these three passwords, so duplicate URL and access-key variables are not
-needed.
+shared infrastructure credentials come from `shide-observability`; the Drop
+compose only needs to know the passwords.
 
 Use a real secret manager for production rather than shell history. MinIO
 must remain private and should not be exposed directly to the Internet.
