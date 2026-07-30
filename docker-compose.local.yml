@@ -1,8 +1,14 @@
 name: drop-local
 
+networks:
+  default:
+    name: shide-observability
+    external: true
+
 services:
   nginx:
     image: nginx:alpine
+    container_name: drop-nginx
     ports:
       - "4917:80"
     volumes:
@@ -11,24 +17,21 @@ services:
     depends_on:
       api:
         condition: service_healthy
-      prometheus:
-        condition: service_started
-      grafana:
-        condition: service_started
 
   api:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: drop-api
     command: api
     environment:
       APP_NAME: Drop
       APP_ENV: local
       DEBUG: "false"
-      DATABASE_URL: postgresql+asyncpg://drop:drop@postgres:5432/drop
-      RABBITMQ_URL: amqp://drop:dropdropdrop@rabbitmq:5672//
-      REDIS_URL: redis://redis:6379/0
-      S3_ENDPOINT: http://minio:9000
+      DATABASE_URL: postgresql+asyncpg://drop:drop@drop-postgres:5432/drop
+      RABBITMQ_URL: amqp://drop:dropdropdrop@drop-rabbitmq:5672//
+      REDIS_URL: redis://drop-redis:6379/0
+      S3_ENDPOINT: http://drop-minio:9000
       S3_ACCESS_KEY: drop
       S3_SECRET_KEY: dropdropdrop
       S3_BUCKET: drop
@@ -56,6 +59,9 @@ services:
       RATE_LIMIT_DOWNLOAD_PER_SESSION_MAX: "10"
       RATE_LIMIT_DOWNLOAD_PER_SESSION_WINDOW: "60"
       DOWNLOAD_STREAM_LOCK_SECONDS: "300"
+      LOG_FILE_PATH: /var/log/shide/drop-api.log
+    volumes:
+      - backend-logs-local:/var/log/shide
     depends_on:
       postgres:
         condition: service_healthy
@@ -75,15 +81,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: drop-worker
     command: worker
     environment:
       APP_NAME: Drop
       APP_ENV: local
       DEBUG: "false"
-      DATABASE_URL: postgresql+asyncpg://drop:drop@postgres:5432/drop
-      RABBITMQ_URL: amqp://drop:dropdropdrop@rabbitmq:5672//
-      REDIS_URL: redis://redis:6379/0
-      S3_ENDPOINT: http://minio:9000
+      DATABASE_URL: postgresql+asyncpg://drop:drop@drop-postgres:5432/drop
+      RABBITMQ_URL: amqp://drop:dropdropdrop@drop-rabbitmq:5672//
+      REDIS_URL: redis://drop-redis:6379/0
+      S3_ENDPOINT: http://drop-minio:9000
       S3_ACCESS_KEY: drop
       S3_SECRET_KEY: dropdropdrop
       S3_BUCKET: drop
@@ -112,8 +119,10 @@ services:
       RATE_LIMIT_DOWNLOAD_PER_SESSION_WINDOW: "60"
       DOWNLOAD_STREAM_LOCK_SECONDS: "300"
       PROMETHEUS_MULTIPROC_DIR: /tmp/prometheus
+      LOG_FILE_PATH: /var/log/shide/drop-worker.log
     volumes:
       - worker_metrics_local_data:/tmp/prometheus
+      - backend-logs-local:/var/log/shide
     depends_on:
       postgres:
         condition: service_healthy
@@ -126,6 +135,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: drop-worker-metrics
     command: metrics
     environment:
       PROMETHEUS_MULTIPROC_DIR: /tmp/prometheus
@@ -139,15 +149,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: drop-beat
     command: beat
     environment:
       APP_NAME: Drop
       APP_ENV: local
       DEBUG: "false"
-      DATABASE_URL: postgresql+asyncpg://drop:drop@postgres:5432/drop
-      RABBITMQ_URL: amqp://drop:dropdropdrop@rabbitmq:5672//
-      REDIS_URL: redis://redis:6379/0
-      S3_ENDPOINT: http://minio:9000
+      DATABASE_URL: postgresql+asyncpg://drop:drop@drop-postgres:5432/drop
+      RABBITMQ_URL: amqp://drop:dropdropdrop@drop-rabbitmq:5672//
+      REDIS_URL: redis://drop-redis:6379/0
+      S3_ENDPOINT: http://drop-minio:9000
       S3_ACCESS_KEY: drop
       S3_SECRET_KEY: dropdropdrop
       S3_BUCKET: drop
@@ -175,6 +186,9 @@ services:
       RATE_LIMIT_DOWNLOAD_PER_SESSION_MAX: "10"
       RATE_LIMIT_DOWNLOAD_PER_SESSION_WINDOW: "60"
       DOWNLOAD_STREAM_LOCK_SECONDS: "300"
+      LOG_FILE_PATH: /var/log/shide/drop-beat.log
+    volumes:
+      - backend-logs-local:/var/log/shide
     depends_on:
       postgres:
         condition: service_healthy
@@ -183,6 +197,7 @@ services:
 
   postgres:
     image: postgres:16-alpine
+    container_name: drop-postgres
     environment:
       POSTGRES_DB: drop
       POSTGRES_USER: drop
@@ -197,6 +212,7 @@ services:
 
   minio:
     image: minio/minio:latest
+    container_name: drop-minio
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: drop
@@ -207,6 +223,7 @@ services:
 
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
+    container_name: drop-rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: drop
       RABBITMQ_DEFAULT_PASS: dropdropdrop
@@ -222,6 +239,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    container_name: drop-redis
     volumes:
       - redis_local_data:/data
     healthcheck:
@@ -232,54 +250,27 @@ services:
 
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.17.1
+    container_name: drop-postgres-exporter
     environment:
-      DATA_SOURCE_NAME: postgresql://drop:drop@postgres:5432/drop?sslmode=disable
+      DATA_SOURCE_NAME: postgresql://drop:drop@drop-postgres:5432/drop?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
 
   redis-exporter:
     image: oliver006/redis_exporter:v1.80.0
-    command: ["--redis.addr=redis://redis:6379"]
+    container_name: drop-redis-exporter
+    command: ["--redis.addr=redis://drop-redis:6379"]
     depends_on:
       redis:
         condition: service_healthy
 
   nginx-exporter:
     image: nginx/nginx-prometheus-exporter:1.4.2
-    command: ["--nginx.scrape-uri=http://nginx/nginx_status"]
+    container_name: drop-nginx-exporter
+    command: ["--nginx.scrape-uri=http://drop-nginx/nginx_status"]
     depends_on:
       nginx:
-        condition: service_started
-
-  prometheus:
-    image: prom/prometheus:v3.5.0
-    command:
-      - --config.file=/etc/prometheus/prometheus.yml
-      - --storage.tsdb.path=/prometheus
-      - --web.external-url=http://localhost:4917/prometheus/
-      - --web.route-prefix=/prometheus
-    volumes:
-      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_local_data:/prometheus
-
-  grafana:
-    image: grafana/grafana:12.1.1
-    environment:
-      GF_AUTH_ANONYMOUS_ENABLED: "true"
-      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
-      GF_AUTH_ANONYMOUS_HIDE_VERSION: "true"
-      GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_SECURITY_ADMIN_USER: drop-admin
-      GF_SECURITY_ADMIN_PASSWORD: local-grafana-admin-password
-      GF_SERVER_ROOT_URL: http://localhost:4917/grafana/
-      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
-    volumes:
-      - grafana_local_data:/var/lib/grafana
-      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
-    depends_on:
-      prometheus:
         condition: service_started
 
 volumes:
@@ -288,5 +279,6 @@ volumes:
   rabbitmq_local_data:
   redis_local_data:
   worker_metrics_local_data:
-  prometheus_local_data:
-  grafana_local_data:
+  backend-logs-local:
+    external: true
+    name: shide-backend-logs-local

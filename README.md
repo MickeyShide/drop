@@ -42,36 +42,51 @@ fails closed on security-sensitive operations.
 
 ## Local launch
 
-The local stack has all development values embedded in a separate Compose file;
-no `.env` file or shell variables are required:
+The local Drop stack uses the shared `shide-observability` network, Prometheus,
+Grafana, Loki and Promtail. Start the observability stack first:
+
+```powershell
+make observability-up
+# or manually:
+docker network create shide-observability
+docker compose -f ../shide-observability/docker-compose.yml up -d
+```
+
+Then start Drop:
 
 ```powershell
 docker compose -f docker-compose.local.yml up -d --build
 # or: make up-local
 ```
 
-The application is available at `http://localhost:4917`. Stop it with:
+The application is available at `http://localhost:4917`.
+Stop Drop with:
 
 ```powershell
 docker compose -f docker-compose.local.yml down
+# or: make down-local
+```
+
+Stop the observability stack with:
+
+```powershell
+make observability-down
 ```
 
 Local peppers and passwords are development-only values and must not be reused
 in production.
 
-The local public showcase is available without authentication:
+The observability stack is available without authentication:
 
-- `http://localhost:4917/stats` — compact public statistics page;
-- `http://localhost:4917/grafana/` — provisioned Grafana dashboard;
-- `http://localhost:4917/prometheus/` — Prometheus UI and query API;
-- `http://localhost:4917/metrics` — raw Prometheus exposition format.
+- `http://localhost:3000` — Grafana with the Drop dashboard;
+- Drop logs are shipped to Loki and searchable in Grafana.
 
 ## Production deployment
 
 Only Nginx is published by the production Compose file. PostgreSQL, Redis,
 RabbitMQ, MinIO, exporters and the FastAPI port remain on the internal Docker
-network. Nginx publicly proxies the showcase endpoints `/stats`, `/metrics`,
-`/prometheus/` and `/grafana/`; Grafana is intentionally anonymous Viewer-only.
+network. Nginx publicly proxies the showcase endpoint `/stats`; production
+observability is provided by a separate `shide-observability` stack.
 Production deployment is performed by GitHub Actions. Before SSH deployment,
 the workflow validates every required GitHub Variable and Secret and fails if
 even one is empty. It then writes a protected `.env` on the target host and
@@ -94,17 +109,11 @@ Required GitHub Secrets:
 - `POSTGRES_PASSWORD`
 - `RABBITMQ_PASSWORD`
 - `MINIO_PASSWORD`
-- `GRAFANA_ADMIN_PASSWORD`
 
 Use URL-safe passwords containing only letters, digits, `-` or `_`. The
 Compose file derives the PostgreSQL, RabbitMQ and S3 application credentials
 from these three passwords, so duplicate URL and access-key variables are not
 needed.
-
-`GRAFANA_ADMIN_PASSWORD` protects the private Grafana administrator account.
-It does not affect the public showcase dashboard, which is visible without a
-login. Since Prometheus and Grafana are intentionally public in this project,
-do not put secrets, personal data or sensitive labels into application metrics.
 
 Use a real secret manager for production rather than shell history. MinIO
 must remain private and should not be exposed directly to the Internet.

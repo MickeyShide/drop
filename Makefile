@@ -1,4 +1,4 @@
-.PHONY: up up-local down down-local test race-test expiration-test lint typecheck clean
+.PHONY: up up-local down down-local test race-test expiration-test lint typecheck clean observability-up observability-down
 
 up:
 	docker compose up -d --build
@@ -11,6 +11,13 @@ down:
 
 down-local:
 	docker compose -f docker-compose.local.yml down
+
+observability-up:
+	docker network create shide-observability || true
+	docker compose -f ../shide-observability/docker-compose.yml up -d
+
+observability-down:
+	docker compose -f ../shide-observability/docker-compose.yml down
 
 test:
 	uv run pytest -v

@@ -2,7 +2,9 @@ from contextvars import ContextVar
 from datetime import UTC, datetime
 import json
 import logging
+import os
 import sys
+from pathlib import Path
 from typing import Any
 
 request_id_var: ContextVar[str | None] = ContextVar("request_id", default=None)
@@ -93,15 +95,28 @@ class JSONFormatter(logging.Formatter):
 
 
 def setup_logging(level: int = logging.INFO) -> None:
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(JSONFormatter())
+    formatter = JSONFormatter()
+
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setFormatter(formatter)
+
+    handlers: list[logging.Handler] = [stream_handler]
+
+    log_file_path = os.environ.get("LOG_FILE_PATH")
+    if log_file_path:
+        log_path = Path(log_file_path)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        file_handler = logging.FileHandler(log_path, encoding="utf-8")
+        file_handler.setFormatter(formatter)
+        handlers.append(file_handler)
 
     root_logger = logging.getLogger()
     root_logger.setLevel(level)
 
     # Remove existing handlers to avoid duplicates
     root_logger.handlers.clear()
-    root_logger.addHandler(handler)
+    for handler in handlers:
+        root_logger.addHandler(handler)
 
     # Align uvicorn and celery loggers
     for logger_name in (
@@ -113,5 +128,6 @@ def setup_logging(level: int = logging.INFO) -> None:
     ):
         lg = logging.getLogger(logger_name)
         lg.handlers.clear()
-        lg.addHandler(handler)
+        for handler in handlers:
+            lg.addHandler(handler)
         lg.propagate = False
