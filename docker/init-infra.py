@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
+import time
 from urllib.parse import urlparse
 
 import asyncpg
@@ -13,7 +14,44 @@ from botocore.client import Config
 from botocore.exceptions import ClientError
 import httpx
 
+MAX_RETRIES = 30
+RETRY_DELAY_SECONDS = 2
 
+
+def retry(message: str):
+    def decorator(func):
+        async def async_wrapper(*args, **kwargs):  # type: ignore[no-untyped-def]
+            last_exc: Exception | None = None
+            for attempt in range(1, MAX_RETRIES + 1):
+                try:
+                    return await func(*args, **kwargs)
+                except Exception as exc:  # noqa: BLE001
+                    last_exc = exc
+                    print(f"{message} (attempt {attempt}/{MAX_RETRIES}): {exc}")
+                    if attempt < MAX_RETRIES:
+                        time.sleep(RETRY_DELAY_SECONDS)
+            raise last_exc  # type: ignore[misc]
+
+        def sync_wrapper(*args, **kwargs):  # type: ignore[no-untyped-def]
+            last_exc: Exception | None = None
+            for attempt in range(1, MAX_RETRIES + 1):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as exc:  # noqa: BLE001
+                    last_exc = exc
+                    print(f"{message} (attempt {attempt}/{MAX_RETRIES}): {exc}")
+                    if attempt < MAX_RETRIES:
+                        time.sleep(RETRY_DELAY_SECONDS)
+            raise last_exc  # type: ignore[misc]
+
+        if asyncio.iscoroutinefunction(func):
+            return async_wrapper
+        return sync_wrapper
+
+    return decorator
+
+
+@retry("Waiting for PostgreSQL")
 async def ensure_database() -> None:
     url = urlparse(os.environ["DATABASE_URL"])
     target_db = url.path.lstrip("/")
@@ -36,6 +74,7 @@ async def ensure_database() -> None:
         await conn.close()
 
 
+@retry("Waiting for RabbitMQ management API")
 def ensure_rabbitmq_vhost() -> None:
     url = urlparse(os.environ["RABBITMQ_URL"])
     vhost = url.path.lstrip("/") or "/"
@@ -52,18 +91,15 @@ def ensure_rabbitmq_vhost() -> None:
         if resp.status_code == 200:
             print(f"RabbitMQ vhost '{vhost}' already exists")
             return
-        if resp.status_code != 404:
-            print(
-                f"RabbitMQ check failed: {resp.status_code} {resp.text}",
-                file=sys.stderr,
-            )
-            sys.exit(1)
+        if resp.status_code not in {404, 401}:
+            resp.raise_for_status()
         encoded_vhost = vhost.replace("/", "%2F")
         resp = client.put(f"{base}/vhosts/{encoded_vhost}", auth=auth)
         resp.raise_for_status()
         print(f"RabbitMQ vhost '{vhost}' created")
 
 
+@retry("Waiting for MinIO")
 def ensure_minio_bucket() -> None:
     bucket = os.environ["S3_BUCKET"]
     endpoint = os.environ["S3_ENDPOINT"]
