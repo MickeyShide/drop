@@ -81,7 +81,7 @@ def ensure_rabbitmq_vhost() -> None:
     user = url.username or "guest"
     password = url.password or "guest"
     host = url.hostname or "localhost"
-    port = url.port or 15672
+    port = 15672
 
     auth = httpx.BasicAuth(user, password)
     base = f"http://{host}:{port}/api"
