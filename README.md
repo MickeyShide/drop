@@ -40,10 +40,11 @@ PostgreSQL is the source of truth for grants and counters. Redis provides
 atomic rate limits and a short-lived per-session stream lock; Redis failure
 fails closed on security-sensitive operations.
 
-## Local launch
+## Launch
 
-The local Drop stack uses the shared `shide-observability` network, Prometheus,
-Grafana, Loki and Promtail. Start the observability stack first:
+Drop uses a single Compose file and relies on the shared `shide-observability`
+stack for Prometheus, Grafana, Loki and Promtail. Start the observability stack
+first:
 
 ```powershell
 make observability-up
@@ -55,16 +56,16 @@ docker compose -f ../shide-observability/docker-compose.yml up -d
 Then start Drop:
 
 ```powershell
-docker compose -f docker-compose.local.yml up -d --build
-# or: make up-local
+docker compose up -d --build
+# or: make up
 ```
 
-The application is available at `http://localhost:4917`.
-Stop Drop with:
+The application is available at `http://localhost:4917` (or the configured
+`NGINX_PORT`). Stop Drop with:
 
 ```powershell
-docker compose -f docker-compose.local.yml down
-# or: make down-local
+docker compose down
+# or: make down
 ```
 
 Stop the observability stack with:
@@ -83,10 +84,10 @@ The observability stack is available without authentication:
 
 ## Production deployment
 
-Only Nginx is published by the production Compose file. PostgreSQL, Redis,
-RabbitMQ, MinIO, exporters and the FastAPI port remain on the internal Docker
-network. Nginx publicly proxies the showcase endpoint `/stats`; production
-observability is provided by a separate `shide-observability` stack.
+Only Nginx is published by the Compose file. PostgreSQL, Redis, RabbitMQ, MinIO,
+exporters and the FastAPI port remain on the internal Docker network. Nginx
+publicly proxies the showcase endpoint `/stats`; observability is provided by
+the separate `shide-observability` stack.
 Production deployment is performed by GitHub Actions. Before SSH deployment,
 the workflow validates every required GitHub Variable and Secret and fails if
 even one is empty. It then writes a protected `.env` on the target host and
