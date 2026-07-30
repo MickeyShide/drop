@@ -21,8 +21,8 @@ async def ensure_database() -> None:
         print("DATABASE_URL missing database name", file=sys.stderr)
         sys.exit(1)
 
-    admin_url = url._replace(path="/postgres").geturl()
-    conn = await asyncpg.connect(admin_url)
+    admin_dsn = url._replace(path="/postgres", scheme="postgresql").geturl()
+    conn = await asyncpg.connect(admin_dsn)
     try:
         exists = await conn.fetchval(
             "SELECT 1 FROM pg_database WHERE datname = $1", target_db
