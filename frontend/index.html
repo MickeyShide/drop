@@ -1066,13 +1066,13 @@
         const step = 60;
 
         const [uploads, downloads, requests, targetsUp, targetsTotal, requestRate, latency] = await Promise.all([
-          queryPrometheus('sum(drop_uploads_total{status="success"})'),
-          queryPrometheus('sum(drop_downloads_total)'),
-          queryPrometheus('sum(rate(http_requests_total[1m])) * 60'),
-          queryPrometheus('sum(up)'),
-          queryPrometheus('count(up)'),
-          queryPrometheusRange('sum by (status_code) (rate(http_requests_total[1m]))', start, end, step),
-          queryPrometheusRange('histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m]))) * 1000', start, end, step),
+          queryPrometheus('sum(drop_uploads_total{job="drop_api",status="success"})'),
+          queryPrometheus('sum(drop_downloads_total{job="drop_api"})'),
+          queryPrometheus('sum(rate(http_requests_total{job="drop_api"}[1m])) * 60'),
+          queryPrometheus('sum(up{job=~"drop_api|celery_worker|nginx"})'),
+          queryPrometheus('count(up{job=~"drop_api|celery_worker|nginx"})'),
+          queryPrometheusRange('sum by (status_code) (rate(http_requests_total{job="drop_api"}[1m]))', start, end, step),
+          queryPrometheusRange('histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job="drop_api"}[5m]))) * 1000', start, end, step),
         ]);
 
         document.getElementById('statsUploads').innerText = formatMetric(uploads);
