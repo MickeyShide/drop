@@ -1,51 +1,72 @@
-# Observability proxy URI fix
+# Observability proxy routing fix
 
 ## Problem
 
-The nginx upstreams for Prometheus and Grafana are stored in variables so that
-Docker DNS is resolved at request time. Their values currently end in `/`.
-With a variable-based `proxy_pass`, that slash is treated as an explicit URI,
-so every incoming subpath is replaced with `/` before proxying.
+Drop connects to the shared `shide-observability` Docker network, but its nginx
+routing does not match the HTTP contracts configured by that stack.
 
-For Prometheus this creates a redirect loop: `/prometheus/query` is proxied as
-`/`, Prometheus redirects to `/prometheus/query`, and the next request is again
-proxied as `/`. For Grafana, asset and API requests incorrectly return the root
-HTML document.
+Prometheus is started with `--web.external-url=/prometheus/` and
+`--web.route-prefix=/`. Public links therefore use the `/prometheus` prefix,
+while the Prometheus server expects internal requests such as `/api/v1/query`.
+Forwarding the public URI unchanged returns `404`; replacing every URI with `/`
+creates a redirect loop back to `/prometheus/query`.
+
+Grafana is configured with `GF_SERVER_ROOT_URL=https://grafana.shide.world` and
+is published separately on port 3001 for the host-level reverse proxy. Serving
+that same instance below `/grafana/` on the Drop domain is incompatible with its
+root URL and asset paths.
+
+## Reference implementation
+
+FlashMarket joins the same external Docker network. Its gateway dynamically
+resolves `shide-prometheus`, strips `/prometheus/` with an nginx rewrite, and
+passes the remaining URI to Prometheus. It does not proxy Grafana; users access
+the shared instance at `https://grafana.shide.world`.
 
 ## Design
 
-Keep the existing Docker DNS resolver and variable-based upstreams, but remove
-the trailing slash from both backend URL values. A `proxy_pass` containing only
-the scheme and authority preserves the complete incoming request URI, including
-the `/prometheus` or `/grafana` prefix expected by the services' configured
-external URLs.
+Drop will follow the FlashMarket routing model:
 
-The canonical redirects from `/prometheus` to `/prometheus/` and from
-`/grafana` to `/grafana/` use exact-match locations, so similarly prefixed
-routes are not redirected into either service.
+- Keep the request-time Docker DNS resolver and variable-based Prometheus
+  upstream.
+- Redirect only the exact `/prometheus` path to `/prometheus/`. Return a
+  relative `Location` value so the inner nginx does not incorrectly advertise
+  HTTP when TLS terminates at the outer proxy.
+- In `/prometheus/`, rewrite the public URI by removing `/prometheus` before
+  proxying. The query string remains intact.
+- Remove the `/grafana` and `/grafana/` proxy locations.
+- Point the frontend Grafana navigation link directly to
+  `https://grafana.shide.world`.
+- Update project documentation that currently describes Grafana as a Drop
+  subpath proxy.
 
 ## Alternatives considered
 
-- Rewrite and strip each prefix before proxying. This conflicts with the
-  services' existing subpath configuration and adds unnecessary rewrite rules.
-- Return to static upstream names. This restores nginx startup coupling to the
-  external observability containers and loses the reason dynamic resolution was
-  introduced.
+- Reconfigure shared Prometheus to use `/prometheus` as its route prefix. This
+  changes shared infrastructure and is unnecessary because FlashMarket already
+  demonstrates the intended integration contract.
+- Reconfigure Grafana for `/grafana/`. One Grafana instance cannot use both the
+  dedicated `grafana.shide.world` root URL and a Drop-specific subpath as its
+  canonical root.
+- Rewrite Grafana HTML and response headers in nginx. This is fragile and still
+  conflicts with Grafana-generated URLs.
 
 ## Verification
 
-- Validate nginx syntax with the repository config mounted into an nginx
-  container when Docker is available.
-- Assert that both variable values contain an authority only and no URI suffix.
-- Assert that only the exact extensionless service paths receive canonical
-  slash redirects.
-- After deployment, verify that `/prometheus/query`,
-  `/prometheus/api/v1/query?query=up`, and `/prometheus/-/healthy` no longer
-  redirect to `/prometheus/query`.
-- Verify that a nested Grafana asset path returns its actual asset rather than
-  the root HTML page.
+- Validate the repository nginx configuration with a real nginx container.
+- Use mock upstream containers to verify that
+  `/prometheus/api/v1/query?query=up` reaches the upstream as
+  `/api/v1/query?query=up`.
+- Verify that only exact `/prometheus` receives the canonical slash redirect and
+  that its `Location` header is relative.
+- Verify there is no Drop `/grafana` proxy and the frontend link targets
+  `https://grafana.shide.world`.
+- Run the complete project test suite with the documented environment.
+- After deployment, verify the live Prometheus instant/range query APIs and the
+  shared Grafana health endpoint.
 
 ## Scope
 
-Only `nginx/nginx.conf` changes at runtime. No application, metrics collection,
-authentication, or public-route behavior is otherwise changed.
+Runtime changes are limited to Drop nginx routing and the frontend Grafana link.
+The shared observability stack, metric collection, dashboards, and application
+APIs remain unchanged.
