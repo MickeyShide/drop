@@ -20,8 +20,9 @@ the scheme and authority preserves the complete incoming request URI, including
 the `/prometheus` or `/grafana` prefix expected by the services' configured
 external URLs.
 
-The explicit canonical redirects from `/prometheus` to `/prometheus/` and from
-`/grafana` to `/grafana/` remain unchanged.
+The canonical redirects from `/prometheus` to `/prometheus/` and from
+`/grafana` to `/grafana/` use exact-match locations, so similarly prefixed
+routes are not redirected into either service.
 
 ## Alternatives considered
 
@@ -36,6 +37,8 @@ The explicit canonical redirects from `/prometheus` to `/prometheus/` and from
 - Validate nginx syntax with the repository config mounted into an nginx
   container when Docker is available.
 - Assert that both variable values contain an authority only and no URI suffix.
+- Assert that only the exact extensionless service paths receive canonical
+  slash redirects.
 - After deployment, verify that `/prometheus/query`,
   `/prometheus/api/v1/query?query=up`, and `/prometheus/-/healthy` no longer
   redirect to `/prometheus/query`.
