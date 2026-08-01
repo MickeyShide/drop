@@ -4,8 +4,8 @@
   "graphTooltip": 1,
   "id": null,
   "links": [
-    { "title": "Raw metrics", "url": "/metrics", "targetBlank": true },
-    { "title": "Prometheus", "url": "/prometheus/graph", "targetBlank": true }
+    { "title": "Raw metrics", "url": "https://drop.shide.world/metrics", "targetBlank": true },
+    { "title": "Prometheus", "url": "https://drop.shide.world/prometheus/graph", "targetBlank": true }
   ],
   "panels": [
     {

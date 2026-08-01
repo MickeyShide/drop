@@ -172,7 +172,7 @@ Nginx :80
   │                                     └── MinIO/S3
   ├── /metrics ─────────────────────► FastAPI :8000 Prometheus exposition
   ├── /prometheus/ ─────────────────► Prometheus :9090
-  └── /grafana/ ────────────────────► Grafana :3000 (anonymous Viewer)
+  └── https://grafana.shide.world ──► Shared Grafana (anonymous Viewer)
 
 Prometheus
   ├── FastAPI /metrics
@@ -1171,7 +1171,7 @@ Nginx:
 - 300-second body/proxy read timeout;
 - static SPA fallback;
 - `/api/`, `/health/` и `/metrics` proxy;
-- public `/prometheus/` и `/grafana/` reverse proxy;
+- public `/prometheus/` reverse proxy и external link на `https://grafana.shide.world`;
 - server tokens off;
 - JSON access logs и security headers.
 
@@ -1185,7 +1185,8 @@ endpoints.
 - из коробки работает без `.env`;
 - development-only credentials встроены;
 - frontend доступен на `http://localhost:4917`;
-- public showcase: `/stats`, `/metrics`, `/prometheus/`, `/grafana/`;
+- public showcase: `/stats`, `/metrics`, `/prometheus/` и shared Grafana на
+  `https://grafana.shide.world`;
 - отдельные local volumes.
 
 ### Container startup
@@ -1421,7 +1422,8 @@ failures.
 
 - **7** явно объявленных FastAPI endpoints.
 - **7** endpoints доступны через production Nginx.
-- **4** public observability routes: `/stats`, `/metrics`, `/prometheus/`, `/grafana/`.
+- **3** public observability routes: `/stats`, `/metrics`, `/prometheus/`, плюс
+  external link на shared Grafana.
 - **4** frontend SPA routes/screens: `/`, `/d/{public_id}`, `/logs`, `/stats`.
 - **4** PostgreSQL tables.
 - **5** Alembic revisions.
